@@ -2,7 +2,7 @@ package seed
 
 import (
 	"encoding/json"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/HarshalPatel1972/epoch/store"
@@ -127,7 +127,7 @@ func Run(es store.EventStore) {
 		})
 	}
 
-	log.Printf("Seeded data: MBP ID: %s, Hub ID: %s, KB ID: %s, Mon ID: %s", mbpID, hubID, kbID, monID)
+	slog.Info("demo data seeded", "mbp_id", mbpID, "hub_id", hubID, "kb_id", kbID, "mon_id", monID)
 }
 
 func marshal(v interface{}) []byte {
@@ -138,6 +138,6 @@ func marshal(v interface{}) []byte {
 func appendEvent(es store.EventStore, e store.Event) {
 	_, err := es.Append(e)
 	if err != nil {
-		log.Printf("error seeding event: %v", err)
+		slog.Error("error seeding event", "err", err)
 	}
 }

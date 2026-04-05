@@ -2,43 +2,61 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"log"
+	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/HarshalPatel1972/epoch/aggregate"
 	"github.com/HarshalPatel1972/epoch/api"
+	"github.com/HarshalPatel1972/epoch/config"
 	"github.com/HarshalPatel1972/epoch/seed"
 	"github.com/HarshalPatel1972/epoch/store"
 	"github.com/HarshalPatel1972/epoch/timeline"
 )
 
 func main() {
-	seedFlag := flag.Bool("seed", false, "populate demo data before starting")
-	port := flag.String("port", "8080", "listen port")
-	dbDir := flag.String("db", "", "path to BadgerDB directory (default: in-memory)")
-	flag.Parse()
+	cfg := config.Load()
+
+	// Initialize slog
+	var level slog.Level
+	switch cfg.LogLevel {
+	case "debug":
+		level = slog.LevelDebug
+	case "warn":
+		level = slog.LevelWarn
+	case "error":
+		level = slog.LevelError
+	default:
+		level = slog.LevelInfo
+	}
+
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: level}))
+	slog.SetDefault(logger)
 
 	var eventStore store.EventStore
 	var snapStore store.SnapshotStore
 
-	if *dbDir != "" {
-		bs, err := store.NewBadgerEventStore(*dbDir)
+	if cfg.DBDir != "" {
+		bs, err := store.NewBadgerEventStore(cfg.DBDir)
 		if err != nil {
-			log.Fatalf("failed to open BadgerDB: %v", err)
+			slog.Error("failed to open BadgerDB", "err", err)
+			os.Exit(1)
 		}
 		defer bs.Close()
 		bss := store.NewBadgerSnapshotStore(bs.DB())
 		bs.SetSnapshotStore(bss)
 		eventStore = bs
 		snapStore = bss
+		slog.Info("BadgerDB store initialized", "dir", cfg.DBDir)
 	} else {
 		ms := store.NewMemoryEventStore()
 		mss := store.NewMemorySnapshotStore()
 		ms.SetSnapshotStore(mss)
 		eventStore = ms
 		snapStore = mss
+		slog.Info("Memory store initialized")
 	}
 
 	projector := &aggregate.Projector{
@@ -50,7 +68,7 @@ func main() {
 	snapshotRequest := func(aggregateID string, currentVersion int64, asOf time.Time) error {
 		prod, err := projector.Project(aggregateID, asOf)
 		if err != nil {
-			log.Printf("snapshot error: projection failed for %s: %v", aggregateID, err)
+			slog.Error("snapshot error: projection failed", "id", aggregateID, "err", err)
 			return err
 		}
 
@@ -66,9 +84,9 @@ func main() {
 			Version:     currentVersion,
 		})
 		if err != nil {
-			log.Printf("snapshot error: save failed for %s: %v", aggregateID, err)
+			slog.Error("snapshot error: save failed", "id", aggregateID, "err", err)
 		} else {
-			log.Printf("snapshot created: %s at version %d", aggregateID, currentVersion)
+			slog.Info("snapshot created", "id", aggregateID, "version", currentVersion)
 		}
 		return err
 	}
@@ -87,14 +105,14 @@ func main() {
 		Registry:  registry,
 	}
 
-	if *seedFlag {
+	if cfg.Seed {
 		seed.Run(eventStore)
-		log.Println("seeded demo data successfully")
+		slog.Info("seeded demo data successfully")
 	}
 
 	router := api.NewRouter(handlers)
-	log.Printf("Epoch listening on :%s (db=%s)\n", *port, orDefault(*dbDir, "memory"))
-	log.Fatal(http.ListenAndServe(":"+*port, router))
+	slog.Info("epoch started", "port", cfg.Port, "db", orDefault(cfg.DBDir, "memory"))
+	log.Fatal(http.ListenAndServe(":"+cfg.Port, router))
 }
 
 func orDefault(val, def string) string {

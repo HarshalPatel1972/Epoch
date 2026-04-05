@@ -1,7 +1,7 @@
 package api
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -36,7 +36,12 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 		
 		next.ServeHTTP(rw, r)
 		
-		log.Printf("[%s] %s → %d (%s)", r.Method, r.URL.Path, rw.status, time.Since(start))
+		slog.Info("request completed",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", rw.status,
+			"duration", time.Since(start).String(),
+		)
 	})
 }
 
