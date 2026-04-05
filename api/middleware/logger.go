@@ -3,7 +3,6 @@ package middleware
 import (
 	"log/slog"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -41,9 +40,3 @@ func Logger(next http.Handler) http.Handler {
 	})
 }
 
-func realIP(r *http.Request) string {
-	if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
-		return strings.Split(fwd, ",")[0]
-	}
-	return r.RemoteAddr
-}
