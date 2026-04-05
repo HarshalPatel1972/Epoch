@@ -110,7 +110,7 @@ func main() {
 		slog.Info("seeded demo data successfully")
 	}
 
-	router := api.NewRouter(handlers)
+	router := api.NewRouter(handlers, cfg)
 	slog.Info("epoch started", "port", cfg.Port, "db", orDefault(cfg.DBDir, "memory"))
 	log.Fatal(http.ListenAndServe(":"+cfg.Port, router))
 }

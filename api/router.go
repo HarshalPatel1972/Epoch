@@ -1,12 +1,13 @@
 package api
 
 import (
-	"log/slog"
 	"net/http"
-	"time"
+
+	"github.com/HarshalPatel1972/epoch/api/middleware"
+	"github.com/HarshalPatel1972/epoch/config"
 )
 
-func NewRouter(h *Handlers) http.Handler {
+func NewRouter(h *Handlers, cfg config.Config) http.Handler {
 	mux := http.NewServeMux()
 
 	// Routes using Go 1.22 pattern matching
@@ -23,34 +24,14 @@ func NewRouter(h *Handlers) http.Handler {
 	mux.HandleFunc("DELETE /timelines/{name}", h.DeleteFork)
 	mux.HandleFunc("GET /diff", h.Diff)
 
-	// Logging middleware
-	return LoggingMiddleware(mux)
-}
+	rl := middleware.NewRateLimiter(cfg.RateLimitRPS)
 
-func LoggingMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		
-		// Create a custom response writer to capture status code
-		rw := &responseWriter{ResponseWriter: w, status: http.StatusOK}
-		
-		next.ServeHTTP(rw, r)
-		
-		slog.Info("request completed",
-			"method", r.Method,
-			"path", r.URL.Path,
-			"status", rw.status,
-			"duration", time.Since(start).String(),
-		)
-	})
-}
-
-type responseWriter struct {
-	http.ResponseWriter
-	status int
-}
-
-func (rw *responseWriter) WriteHeader(code int) {
-	rw.status = code
-	rw.ResponseWriter.WriteHeader(code)
+	// Middleware stack: RequestID -> Logger -> CORS -> RateLimit -> Mux
+	return middleware.RequestID(
+		middleware.Logger(
+			middleware.CORS(cfg.CORSOrigins)(
+				rl.Middleware(mux),
+			),
+		),
+	)
 }
