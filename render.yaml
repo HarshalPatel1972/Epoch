@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: epoch-api
+    env: go
+    plan: free
+    buildCommand: go build -o bin/epoch main.go
+    startCommand: ./bin/epoch
+    healthCheckPath: /health
+    envVars:
+      - key: LOG_LEVEL
+        value: info
+      - key: PORT
+        value: 8080
+      - key: SEED
+        value: true
+      - key: RATE_LIMIT_RPS
+        value: 100
+      - key: SHUTDOWN_TIMEOUT
+        value: 5s
+      - key: CORS_ORIGINS
+        value: "*"
