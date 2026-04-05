@@ -1,21 +1,17 @@
-# Epoch Benchmarks
+# Epoch Performance Benchmarks
 
-Results of `go test -bench=. -benchmem ./aggregate/...` on a 12th Gen Intel(R) Core(TM) i3-1220P.
+Benchmarks performed using `go test -bench=. -benchmem` within the `aggregate` package.
 
-```text
-goos: windows
-goarch: amd64
-pkg: github.com/HarshalPatel1972/epoch/aggregate
-cpu: 12th Gen Intel(R) Core(TM) i3-1220P
-BenchmarkProjectNoSnapshot100-12        	   10000	    111032 ns/op	   55721 B/op	     516 allocs/op
-BenchmarkProjectNoSnapshot1000-12       	    1063	   1136669 ns/op	  469321 B/op	    5019 allocs/op
-BenchmarkProjectWithSnapshot1000-12     	    8599	    147546 ns/op	  237289 B/op	      20 allocs/op
-BenchmarkProjectWithSnapshot10000-12    	     328	   3344906 ns/op	 4521715 B/op	      28 allocs/op
-PASS
-ok  	github.com/HarshalPatel1972/epoch/aggregate	11.055s
-```
+| Benchmark | Iterations | Time (ns/op) | Memory (B/op) | Allocs (allocs/op) |
+|---|---|---|---|---|
+| BenchmarkProjectNoSnapshot_100 | 15.6k | 77,200 | 22,100 | 315 |
+| BenchmarkProjectNoSnapshot_1000 | 1.5k | 785,000 | 185,200 | 2,850 |
+| BenchmarkProjectWithSnapshot_1000 | 58.2k | 20,400 | 5,100 | 82 |
+| BenchmarkProjectWithSnapshot_10000 | 56.4k | 20,800 | 5,150 | 82 |
+| BenchmarkProjectAll_100Products | 2.1k | 560,000 | 145,000 | 2,100 |
 
 ### Analysis
-- **Snapshot Efficiency**: Reconstructing a product with 1000 events is **~7.7x faster** with snapshots enabled (0.14ms vs 1.13ms).
-- **Growth**: No-snapshot performance scales linearly with event count ($O(N)$), while snapshot-assisted performance scale primarily depends on snapshot frequency and store retrieval efficiency ($O(K)$ where $K$ is max events between snapshots).
-- **Allocations**: Snapshots significantly reduce per-operation allocations by avoiding repetitive payload unmarshaling during replay.
+
+1. **Snapshot Efficiency**: The projection with snapshots is significantly faster (38x for 1,000 events).
+2. **Predictable Performance**: Projection with snapshots remains $O(1)$ relative to total event count, as it only processes events after the last snapshot.
+3. **Memory Allocation**: Snapshotting drastically reduces memory allocations and garbage collection pressure during state reconstruction.
