@@ -106,6 +106,7 @@ func main() {
 		Store:     eventStore,
 		Projector: projector,
 		Registry:  registry,
+		StartTime: time.Now(),
 	}
 
 	if cfg.Seed {

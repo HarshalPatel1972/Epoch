@@ -16,6 +16,34 @@ type Handlers struct {
 	Store     store.EventStore
 	Projector *aggregate.Projector
 	Registry  *timeline.ForkRegistry
+	StartTime time.Time
+}
+
+func (h *Handlers) Health(w http.ResponseWriter, r *http.Request) {
+	JSON(w, http.StatusOK, map[string]interface{}{
+		"status":         "ok",
+		"uptime_seconds": int(time.Since(h.StartTime).Seconds()),
+		"version":        "1.0.0",
+	})
+}
+
+func (h *Handlers) Ready(w http.ResponseWriter, r *http.Request) {
+	if !h.Store.IsReady() {
+		JSON(w, http.StatusServiceUnavailable, map[string]interface{}{
+			"status": "not ready",
+			"reason": "store not initialized",
+		})
+		return
+	}
+
+	events, _ := h.Store.LoadAll()
+	ids := h.Store.AllAggregateIDs()
+
+	JSON(w, http.StatusOK, map[string]interface{}{
+		"status":          "ready",
+		"event_count":     len(events),
+		"aggregate_count": len(ids),
+	})
 }
 
 func (h *Handlers) resolveProjector(r *http.Request) (*aggregate.Projector, error) {
@@ -410,14 +438,3 @@ func (h *Handlers) ListEvents(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *Handlers) Health(w http.ResponseWriter, r *http.Request) {
-	s, _ := h.resolveStore(r)
-	events, _ := s.LoadAll()
-	ids := s.AllAggregateIDs()
-
-	JSON(w, http.StatusOK, map[string]interface{}{
-		"status":          "ok",
-		"event_count":     len(events),
-		"aggregate_count": len(ids),
-	})
-}

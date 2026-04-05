@@ -49,4 +49,5 @@ type EventStore interface {
 	LoadBefore(aggregateID string, cutoff time.Time) ([]Event, error)
 	LoadAll() ([]Event, error)
 	AllAggregateIDs() []string
+	IsReady() bool
 }

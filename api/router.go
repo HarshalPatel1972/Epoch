@@ -19,6 +19,7 @@ func NewRouter(h *Handlers, cfg config.Config) http.Handler {
 	mux.HandleFunc("DELETE /products/{id}", h.DeleteProduct)
 	mux.HandleFunc("GET /events", h.ListEvents)
 	mux.HandleFunc("GET /health", h.Health)
+	mux.HandleFunc("GET /ready", h.Ready)
 	mux.HandleFunc("POST /timelines/fork", h.CreateFork)
 	mux.HandleFunc("GET /timelines", h.ListForks)
 	mux.HandleFunc("DELETE /timelines/{name}", h.DeleteFork)

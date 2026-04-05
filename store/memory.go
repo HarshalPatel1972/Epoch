@@ -113,3 +113,7 @@ func (s *MemoryEventStore) AllAggregateIDs() []string {
 	}
 	return ids
 }
+
+func (s *MemoryEventStore) IsReady() bool {
+	return true
+}

@@ -6,7 +6,7 @@ import (
 )
 
 type ForkEventStore struct {
-	main       EventStore      // read-only main
+	main       EventStore        // read-only main
 	overlay    *MemoryEventStore // fork-specific overlay (always Memory)
 	forkedFrom time.Time
 }
@@ -20,7 +20,6 @@ func NewForkEventStore(main EventStore, forkedFrom time.Time) *ForkEventStore {
 }
 
 func (f *ForkEventStore) Append(e Event) (Event, error) {
-	// Always append to overlay
 	return f.overlay.Append(e)
 }
 
@@ -41,10 +40,6 @@ func (f *ForkEventStore) LoadBefore(aggregateID string, cutoff time.Time) ([]Eve
 }
 
 func (f *ForkEventStore) LoadAll() ([]Event, error) {
-	// This is a bit expensive for a fork, but needed for /events
-	// We'll just load all from main (before forkedFrom) and all from overlay
-	// Note: AllAggregateIDs union might be needed.
-	
 	ids := f.AllAggregateIDs()
 	var all []Event
 	for _, id := range ids {
@@ -69,18 +64,22 @@ func (f *ForkEventStore) AllAggregateIDs() []string {
 	seen := make(map[string]bool)
 	var res []string
 	for _, id := range mainIDs {
-		if _, ok := seen[id]; !ok {
+		if !seen[id] {
 			seen[id] = true
 			res = append(res, id)
 		}
 	}
 	for _, id := range overlayIDs {
-		if _, ok := seen[id]; !ok {
+		if !seen[id] {
 			seen[id] = true
 			res = append(res, id)
 		}
 	}
 	return res
+}
+
+func (f *ForkEventStore) IsReady() bool {
+	return f.main.IsReady()
 }
 
 func mergeEventSlices(main, fork []Event) []Event {

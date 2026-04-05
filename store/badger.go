@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/dgraph-io/badger/v4"
@@ -17,6 +18,7 @@ type BadgerEventStore struct {
 	seq       map[string]int64
 	aggIDs    map[string]struct{}
 	snapStore SnapshotStore
+	ready     atomic.Bool
 
 	// Injectable callback for creating snapshots
 	RequestSnapshot func(aggregateID string, currentVersion int64, asOf time.Time) error
@@ -41,7 +43,12 @@ func NewBadgerEventStore(dir string) (*BadgerEventStore, error) {
 		return nil, fmt.Errorf("failed to rehydrate sequence map: %w", err)
 	}
 
+	s.ready.Store(true)
 	return s, nil
+}
+
+func (s *BadgerEventStore) IsReady() bool {
+	return s.ready.Load()
 }
 
 func (s *BadgerEventStore) SetSnapshotStore(ss SnapshotStore) {
