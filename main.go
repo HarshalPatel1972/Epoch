@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/HarshalPatel1972/epoch/aggregate"
@@ -37,6 +39,7 @@ func main() {
 
 	var eventStore store.EventStore
 	var snapStore store.SnapshotStore
+	var badgerStore *store.BadgerEventStore
 
 	if cfg.DBDir != "" {
 		bs, err := store.NewBadgerEventStore(cfg.DBDir)
@@ -44,7 +47,7 @@ func main() {
 			slog.Error("failed to open BadgerDB", "err", err)
 			os.Exit(1)
 		}
-		defer bs.Close()
+		badgerStore = bs
 		bss := store.NewBadgerSnapshotStore(bs.DB())
 		bs.SetSnapshotStore(bss)
 		eventStore = bs
@@ -111,8 +114,44 @@ func main() {
 	}
 
 	router := api.NewRouter(handlers, cfg)
-	slog.Info("epoch started", "port", cfg.Port, "db", orDefault(cfg.DBDir, "memory"))
-	log.Fatal(http.ListenAndServe(":"+cfg.Port, router))
+
+	srv := &http.Server{
+		Addr:         ":" + cfg.Port,
+		Handler:      router,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  120 * time.Second,
+	}
+
+	// Start server in goroutine
+	go func() {
+		slog.Info("epoch started", "port", cfg.Port, "db", orDefault(cfg.DBDir, "memory"))
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("server error", "err", err)
+			os.Exit(1)
+		}
+	}()
+
+	// Block until OS signal
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	slog.Info("shutdown initiated")
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		slog.Error("shutdown error", "err", err)
+	}
+
+	// Close BadgerDB if open
+	if badgerStore != nil {
+		badgerStore.Close()
+		slog.Info("BadgerDB closed")
+	}
+
+	slog.Info("shutdown complete")
 }
 
 func orDefault(val, def string) string {
