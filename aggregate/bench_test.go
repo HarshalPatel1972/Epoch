@@ -1,52 +1,25 @@
-package aggregate
+package aggregate_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
+	"github.com/HarshalPatel1972/epoch/aggregate"
 	"github.com/HarshalPatel1972/epoch/store"
 )
 
-func createBenchEnv(withSnapshots bool) (store.EventStore, store.SnapshotStore, *Projector) {
-	es := store.NewMemoryEventStore()
-	ss := store.NewMemorySnapshotStore()
-	es.SetSnapshotStore(ss)
-
-	p := &Projector{
-		Events:    es,
-		Snapshots: ss,
-	}
-
-	if withSnapshots {
-		es.RequestSnapshot = func(aggregateID string, currentVersion int64, asOf time.Time) error {
-			prod, _ := p.Project(aggregateID, asOf)
-			if prod == nil {
-				return nil
-			}
-			state, _ := json.Marshal(prod)
-			return ss.Save(store.Snapshot{
-				AggregateID: aggregateID,
-				State:       state,
-				AsOf:        asOf,
-				Version:     currentVersion,
-			})
-		}
-	}
-
-	return es, ss, p
-}
-
-func seedEvents(es store.EventStore, id string, count int) {
-	// First event: ProductCreated
+func seedEvents(es store.EventStore, aggregateID string, n int) {
+	// Append 1 ProductCreated + (n-1) alternating PriceUpdated/StockUpdated events
 	es.Append(store.Event{
 		Type:        store.EventProductCreated,
-		AggregateID: id,
-		Payload:     marshal(store.ProductCreatedPayload{ID: id, Name: "Bench", SKU: "B-1", Price: 100, Stock: 100, Category: "test"}),
-		OccurredAt:  time.Now(),
+		AggregateID: aggregateID,
+		Payload:     marshal(store.ProductCreatedPayload{ID: aggregateID, Name: "bench", SKU: "B", Price: 100, Stock: 100, Category: "c"}),
+		OccurredAt:  time.Now().AddDate(-1, 0, 0),
 	})
 
-	for i := 1; i < count; i++ {
+	for i := 1; i < n; i++ {
 		var et store.EventType
 		var payload interface{}
 		if i%2 == 0 {
@@ -58,9 +31,9 @@ func seedEvents(es store.EventStore, id string, count int) {
 		}
 		es.Append(store.Event{
 			Type:        et,
-			AggregateID: id,
+			AggregateID: aggregateID,
 			Payload:     marshal(payload),
-			OccurredAt:  time.Now(),
+			OccurredAt:  time.Now().AddDate(-1, 0, 0).Add(time.Duration(i) * time.Second),
 		})
 	}
 }
@@ -70,56 +43,91 @@ func marshal(v interface{}) []byte {
 	return b
 }
 
-func BenchmarkProjectNoSnapshot100(b *testing.B) {
-	b.ReportAllocs()
-	id := "bench-100"
-	es, _, p := createBenchEnv(false)
-	seedEvents(es, id, 100)
-
+func BenchmarkProjectNoSnapshot_100(b *testing.B) {
+	es := store.NewMemoryEventStore()
+	seedEvents(es, "bench-product", 100)
+	proj := &aggregate.Projector{Events: es}
 	b.ResetTimer()
+	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_, _ = p.Project(id, time.Time{})
+		proj.Project("bench-product", time.Time{})
 	}
 }
 
-func BenchmarkProjectNoSnapshot1000(b *testing.B) {
-	b.ReportAllocs()
-	id := "bench-1000"
-	es, _, p := createBenchEnv(false)
-	seedEvents(es, id, 1000)
-
+func BenchmarkProjectNoSnapshot_1000(b *testing.B) {
+	es := store.NewMemoryEventStore()
+	seedEvents(es, "bench-product", 1000)
+	proj := &aggregate.Projector{Events: es}
 	b.ResetTimer()
+	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_, _ = p.Project(id, time.Time{})
+		proj.Project("bench-product", time.Time{})
 	}
 }
 
-func BenchmarkProjectWithSnapshot1000(b *testing.B) {
-	b.ReportAllocs()
-	id := "bench-snap-1000"
-	es, _, p := createBenchEnv(true)
-	seedEvents(es, id, 1000)
-	
-	// Ensure snapshots are generated (since they are async in MemoryEventStore)
+func BenchmarkProjectWithSnapshot_1000(b *testing.B) {
+	es := store.NewMemoryEventStore()
+	ss := store.NewMemorySnapshotStore()
+	es.SetSnapshotStore(ss)
+
+	proj := &aggregate.Projector{Events: es, Snapshots: ss}
+	es.RequestSnapshot = func(aggregateID string, currentVersion int64, asOf time.Time) error {
+		prod, _ := proj.Project(aggregateID, asOf)
+		state, _ := json.Marshal(prod)
+		return ss.Save(store.Snapshot{
+			AggregateID: aggregateID,
+			State:       state,
+			AsOf:        asOf,
+			Version:     currentVersion,
+		})
+	}
+
+	seedEvents(es, "bench-product", 1000)
 	time.Sleep(100 * time.Millisecond)
 
 	b.ResetTimer()
+	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_, _ = p.Project(id, time.Time{})
+		proj.Project("bench-product", time.Time{})
 	}
 }
 
-func BenchmarkProjectWithSnapshot10000(b *testing.B) {
-	b.ReportAllocs()
-	id := "bench-snap-10000"
-	es, _, p := createBenchEnv(true)
-	seedEvents(es, id, 10000)
-	
-	// Ensure snapshots are generated
+func BenchmarkProjectWithSnapshot_10000(b *testing.B) {
+	es := store.NewMemoryEventStore()
+	ss := store.NewMemorySnapshotStore()
+	es.SetSnapshotStore(ss)
+
+	proj := &aggregate.Projector{Events: es, Snapshots: ss}
+	es.RequestSnapshot = func(aggregateID string, currentVersion int64, asOf time.Time) error {
+		prod, _ := proj.Project(aggregateID, asOf)
+		state, _ := json.Marshal(prod)
+		return ss.Save(store.Snapshot{
+			AggregateID: aggregateID,
+			State:       state,
+			AsOf:        asOf,
+			Version:     currentVersion,
+		})
+	}
+
+	seedEvents(es, "bench-product", 10000)
 	time.Sleep(200 * time.Millisecond)
 
 	b.ResetTimer()
+	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		_, _ = p.Project(id, time.Time{})
+		proj.Project("bench-product", time.Time{})
+	}
+}
+
+func BenchmarkProjectAll_100Products(b *testing.B) {
+	es := store.NewMemoryEventStore()
+	for i := 0; i < 100; i++ {
+		seedEvents(es, fmt.Sprintf("prod-%d", i), 10)
+	}
+	proj := &aggregate.Projector{Events: es}
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		proj.ProjectAll(time.Time{})
 	}
 }
