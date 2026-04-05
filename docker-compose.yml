@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  epoch:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    environment:
+      - PORT=8080
+      - DB_DIR=/data/badger
+      - LOG_LEVEL=debug
+      - RATE_LIMIT_RPS=10
+      - SHUTDOWN_TIMEOUT=5s
+    restart: always
+
+# Persistence across restarts
+volumes:
+  data:
