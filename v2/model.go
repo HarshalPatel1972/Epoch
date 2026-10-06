@@ -460,7 +460,7 @@ type AnyModel interface {
 	ModelName() string
 	LoadAny(ctx context.Context, s Store, id string, opts ...Option) (State[any], error)
 	History(ctx context.Context, s Store, id string, opts ...Option) ([]Commit, error)
-	newReplayer(ctx context.Context, s Store, l lineage) (replayer, error)
+	newReplayer(l lineage) (replayer, error)
 }
 
 var _ AnyModel = (*Model[struct{}])(nil)

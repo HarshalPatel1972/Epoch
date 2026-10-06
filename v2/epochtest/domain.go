@@ -56,12 +56,12 @@ func decideAccount(s account, c any, _ time.Time) ([]any, error) {
 		if s.Open {
 			return nil, errAlreadyOpen
 		}
-		return []any{opened{Limit: c.Limit}}, nil
+		return []any{opened(c)}, nil
 	case deposit:
 		if !s.Open {
 			return nil, errNotOpen
 		}
-		return []any{deposited{Amount: c.Amount}}, nil
+		return []any{deposited(c)}, nil
 	case withdraw:
 		if !s.Open {
 			return nil, errNotOpen
@@ -69,7 +69,7 @@ func decideAccount(s account, c any, _ time.Time) ([]any, error) {
 		if s.Balance-c.Amount < -s.Limit {
 			return nil, errInsufficient
 		}
-		return []any{withdrawn{Amount: c.Amount}}, nil
+		return []any{withdrawn(c)}, nil
 	case explode:
 		panic("boom")
 	}
@@ -96,7 +96,7 @@ func decideWithFee(s account, c any, now time.Time) ([]any, error) {
 // decideGenerous doubles every overdraft limit.
 func decideGenerous(s account, c any, now time.Time) ([]any, error) {
 	if w, ok := c.(withdraw); ok && s.Open && s.Balance-w.Amount >= -2*s.Limit {
-		return []any{withdrawn{Amount: w.Amount}}, nil
+		return []any{withdrawn(w)}, nil
 	}
 	return decideAccount(s, c, now)
 }

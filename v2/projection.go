@@ -45,11 +45,13 @@ func (r Rejection) PayloadData() json.RawMessage { return r.Command.Data }
 // dashboard, a search index. Because it reads the log, it can be computed for
 // any branch and any point in time.
 //
-// Event and Rejected must be pure and must not modify v in place when V
-// contains maps or slices that an earlier result might still reference.
+// Every Get starts from a fresh Init() and folds the log in order, so Event
+// and Rejected may update v in place. They must not depend on anything but v
+// and the record.
 type Projection[V any] struct {
 	Name string
-	// Init returns the empty read model. If nil, the zero V is used.
+	// Init returns a new, empty read model. If nil, the zero V is used, so set
+	// Init when V contains maps that Event writes to.
 	Init func() V
 	// Event applies one event.
 	Event func(v V, r Record) V

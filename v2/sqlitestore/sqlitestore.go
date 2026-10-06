@@ -68,11 +68,97 @@ CREATE TABLE IF NOT EXISTS epoch_snapshots (
 
 // Store is a SQLite-backed epoch.Store. It is safe for concurrent use.
 type Store struct {
-	w *sql.DB // single connection; every write is an IMMEDIATE transaction
-	r *sql.DB // read pool (the same handle as w for in-memory databases)
+	w  *sql.DB // single connection; every write is an IMMEDIATE transaction
+	r  *sql.DB // read pool (the same handle as w for in-memory databases)
+	tx *sql.Tx // set on the Store passed to a Batch function
+	st *stmts
 }
 
-var _ epoch.Store = (*Store)(nil)
+// stmts are the append path's statements, prepared once on the writer
+// connection. Parsing them on every append would dominate replay time.
+type stmts struct {
+	branchExists, streamVersion, lastTime, insert *sql.Stmt
+}
+
+func prepare(db *sql.DB) (*stmts, error) {
+	var st stmts
+	for _, p := range []struct {
+		dst   **sql.Stmt
+		query string
+	}{
+		{&st.branchExists, `SELECT 1 FROM epoch_branches WHERE name = ?`},
+		{&st.streamVersion, `SELECT version FROM epoch_commits WHERE branch = ? AND model = ? AND stream = ? ORDER BY seq DESC LIMIT 1`},
+		{&st.lastTime, `SELECT time FROM epoch_commits WHERE branch = ? ORDER BY seq DESC LIMIT 1`},
+		{&st.insert, `INSERT INTO epoch_commits (branch, time, model, stream, version, command_id, command_type, command_data, events, rejected, origin)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`},
+	} {
+		stmt, err := db.Prepare(p.query)
+		if err != nil {
+			return nil, err
+		}
+		*p.dst = stmt
+	}
+	return &st, nil
+}
+
+var (
+	_ epoch.Store   = (*Store)(nil)
+	_ epoch.Batcher = (*Store)(nil)
+)
+
+// dbtx is what *sql.DB and *sql.Tx have in common.
+type dbtx interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}
+
+// rd returns the handle for reads: the batch transaction, so a batch sees its
+// own writes, or else the read pool.
+func (s *Store) rd() dbtx {
+	if s.tx != nil {
+		return s.tx
+	}
+	return s.r
+}
+
+// wr returns the handle for single-statement writes.
+func (s *Store) wr() dbtx {
+	if s.tx != nil {
+		return s.tx
+	}
+	return s.w
+}
+
+// inTx runs fn in the batch transaction if there is one, or else in a new
+// IMMEDIATE transaction.
+func (s *Store) inTx(ctx context.Context, fn func(tx *sql.Tx) error) error {
+	if s.tx != nil {
+		return fn(s.tx)
+	}
+	tx, err := s.w.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	if err := fn(tx); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	return tx.Commit()
+}
+
+// Batch runs fn in one transaction: everything fn writes through the Store it
+// is given is committed together, or not at all if fn returns an error. Other
+// writers wait until the batch ends. epoch.Replay uses it to replay thousands
+// of commands per second.
+func (s *Store) Batch(ctx context.Context, fn func(epoch.Store) error) error {
+	if s.tx != nil {
+		return fn(s)
+	}
+	return s.inTx(ctx, func(tx *sql.Tx) error {
+		return fn(&Store{w: s.w, r: s.r, tx: tx, st: s.st})
+	})
+}
 
 // Open opens or creates the database at path and creates Epoch's tables. Use
 // ":memory:" for a private in-memory database.
@@ -106,7 +192,12 @@ func Open(path string) (*Store, error) {
 		w.Close()
 		return nil, fmt.Errorf("sqlitestore: creating schema: %w", err)
 	}
-	s := &Store{w: w, r: w}
+	st, err := prepare(w)
+	if err != nil {
+		w.Close()
+		return nil, fmt.Errorf("sqlitestore: preparing statements: %w", err)
+	}
+	s := &Store{w: w, r: w, st: st}
 	if !memory {
 		if s.r, err = sql.Open("sqlite", dsn("")); err != nil {
 			w.Close()
@@ -142,56 +233,59 @@ func fromNanos(n sql.NullInt64) time.Time {
 	return time.Unix(0, n.Int64).UTC()
 }
 
-func branchExists(ctx context.Context, tx *sql.Tx, name string) (bool, error) {
-	if name == epoch.Main {
-		return true, nil
+func (s *Store) Append(ctx context.Context, c *epoch.Commit, cond epoch.AppendCondition) error {
+	var seq, version int64
+	var t time.Time
+	err := s.inTx(ctx, func(tx *sql.Tx) (err error) {
+		seq, version, t, err = s.appendTx(ctx, tx, c, cond)
+		return err
+	})
+	if err != nil {
+		return err
 	}
-	var one int
-	err := tx.QueryRowContext(ctx, `SELECT 1 FROM epoch_branches WHERE name = ?`, name).Scan(&one)
-	if errors.Is(err, sql.ErrNoRows) {
-		return false, nil
-	}
-	return err == nil, err
+	c.Seq, c.Time, c.Version = seq, time.Unix(0, t.UnixNano()).UTC(), version
+	return nil
 }
 
-func (s *Store) Append(ctx context.Context, c *epoch.Commit, cond epoch.AppendCondition) (err error) {
-	tx, err := s.w.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback()
+func (s *Store) appendTx(ctx context.Context, tx *sql.Tx, c *epoch.Commit, cond epoch.AppendCondition) (seq, version int64, t time.Time, err error) {
+	// The writer pool has one connection, so these reuse the statements
+	// prepared on it instead of parsing again.
+	stmt := func(st *sql.Stmt) *sql.Stmt { return tx.StmtContext(ctx, st) }
+	ok := c.Branch == epoch.Main
+	if !ok {
+		var one int
+		err = stmt(s.st.branchExists).QueryRowContext(ctx, c.Branch).Scan(&one)
+		if errors.Is(err, sql.ErrNoRows) {
+			err = nil
 		}
-	}()
-
-	ok, err := branchExists(ctx, tx, c.Branch)
+		ok = one == 1
+	}
 	if err != nil {
-		return err
+		return
 	}
 	if !ok {
-		return fmt.Errorf("%w: %q", epoch.ErrBranchNotFound, c.Branch)
+		err = fmt.Errorf("%w: %q", epoch.ErrBranchNotFound, c.Branch)
+		return
 	}
 
 	cur := cond.BaseVersion
-	err = tx.QueryRowContext(ctx,
-		`SELECT version FROM epoch_commits WHERE branch = ? AND model = ? AND stream = ? ORDER BY seq DESC LIMIT 1`,
-		c.Branch, c.Model, c.Stream).Scan(&cur)
+	err = stmt(s.st.streamVersion).QueryRowContext(ctx, c.Branch, c.Model, c.Stream).Scan(&cur)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return err
+		return
 	}
 	if cond.ExpectedVersion != epoch.Any && cond.ExpectedVersion != cur {
-		return fmt.Errorf("%w: %s/%s is at version %d, expected %d", epoch.ErrConflict, c.Model, c.Stream, cur, cond.ExpectedVersion)
+		err = fmt.Errorf("%w: %s/%s is at version %d, expected %d", epoch.ErrConflict, c.Model, c.Stream, cur, cond.ExpectedVersion)
+		return
 	}
 
-	t := c.Time
+	t = c.Time
 	if t.Before(cond.MinTime) {
 		t = cond.MinTime
 	}
 	var last sql.NullInt64
-	err = tx.QueryRowContext(ctx, `SELECT time FROM epoch_commits WHERE branch = ? ORDER BY seq DESC LIMIT 1`, c.Branch).Scan(&last)
+	err = stmt(s.st.lastTime).QueryRowContext(ctx, c.Branch).Scan(&last)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return err
+		return
 	}
 	if prev := fromNanos(last); last.Valid && t.Before(prev) {
 		t = prev
@@ -199,7 +293,7 @@ func (s *Store) Append(ctx context.Context, c *epoch.Commit, cond epoch.AppendCo
 
 	events, err := json.Marshal(c.Events)
 	if err != nil {
-		return err
+		return
 	}
 	var cmdID, cmdType sql.NullString
 	var cmdData []byte
@@ -208,23 +302,14 @@ func (s *Store) Append(ctx context.Context, c *epoch.Commit, cond epoch.AppendCo
 		cmdType = sql.NullString{String: c.Command.Type, Valid: true}
 		cmdData = c.Command.Data
 	}
-	version := cur + int64(len(c.Events))
-	res, err := tx.ExecContext(ctx, `
-		INSERT INTO epoch_commits (branch, time, model, stream, version, command_id, command_type, command_data, events, rejected, origin)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+	version = cur + int64(len(c.Events))
+	res, err := stmt(s.st.insert).ExecContext(ctx,
 		c.Branch, t.UnixNano(), c.Model, c.Stream, version, cmdID, cmdType, cmdData, events, c.Rejected, c.Origin)
 	if err != nil {
-		return err
+		return
 	}
-	seq, err := res.LastInsertId()
-	if err != nil {
-		return err
-	}
-	if err = tx.Commit(); err != nil {
-		return err
-	}
-	c.Seq, c.Time, c.Version = seq, time.Unix(0, t.UnixNano()).UTC(), version
-	return nil
+	seq, err = res.LastInsertId()
+	return
 }
 
 const commitColumns = `seq, branch, time, model, stream, version, command_id, command_type, command_data, events, rejected, origin`
@@ -260,7 +345,7 @@ func (s *Store) Read(ctx context.Context, q epoch.Query) ([]epoch.Commit, error)
 		query += fmt.Sprintf(` LIMIT %d`, q.Limit)
 	}
 
-	rows, err := s.r.QueryContext(ctx, query, args...)
+	rows, err := s.rd().QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +382,7 @@ func (s *Store) SeqAt(ctx context.Context, branch string, t time.Time, maxSeq in
 	}
 	query += ` ORDER BY time DESC, seq DESC LIMIT 1`
 	var seq int64
-	err := s.r.QueryRowContext(ctx, query, args...).Scan(&seq)
+	err := s.rd().QueryRowContext(ctx, query, args...).Scan(&seq)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, nil
 	}
@@ -308,7 +393,7 @@ func (s *Store) CreateBranch(ctx context.Context, b epoch.Branch) error {
 	if b.Name == epoch.Main {
 		return fmt.Errorf("%w: %q", epoch.ErrBranchExists, b.Name)
 	}
-	res, err := s.w.ExecContext(ctx, `
+	res, err := s.wr().ExecContext(ctx, `
 		INSERT INTO epoch_branches (name, parent, fork_seq, fork_time, created, kind, description)
 		VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (name) DO NOTHING`,
 		b.Name, b.Parent, b.ForkSeq, toNanos(b.ForkTime), toNanos(b.Created), b.Kind, b.Description)
@@ -334,7 +419,7 @@ func scanBranch(sc interface{ Scan(...any) error }) (epoch.Branch, error) {
 }
 
 func (s *Store) GetBranch(ctx context.Context, name string) (epoch.Branch, error) {
-	b, err := scanBranch(s.r.QueryRowContext(ctx, `SELECT `+branchColumns+` FROM epoch_branches WHERE name = ?`, name))
+	b, err := scanBranch(s.rd().QueryRowContext(ctx, `SELECT `+branchColumns+` FROM epoch_branches WHERE name = ?`, name))
 	if errors.Is(err, sql.ErrNoRows) {
 		return epoch.Branch{}, fmt.Errorf("%w: %q", epoch.ErrBranchNotFound, name)
 	}
@@ -342,7 +427,7 @@ func (s *Store) GetBranch(ctx context.Context, name string) (epoch.Branch, error
 }
 
 func (s *Store) ListBranches(ctx context.Context) ([]epoch.Branch, error) {
-	rows, err := s.r.QueryContext(ctx, `SELECT `+branchColumns+` FROM epoch_branches ORDER BY created, name`)
+	rows, err := s.rd().QueryContext(ctx, `SELECT `+branchColumns+` FROM epoch_branches ORDER BY created, name`)
 	if err != nil {
 		return nil, err
 	}
@@ -358,38 +443,29 @@ func (s *Store) ListBranches(ctx context.Context) ([]epoch.Branch, error) {
 	return out, rows.Err()
 }
 
-func (s *Store) DeleteBranch(ctx context.Context, name string) (err error) {
-	tx, err := s.w.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer func() {
+func (s *Store) DeleteBranch(ctx context.Context, name string) error {
+	return s.inTx(ctx, func(tx *sql.Tx) error {
+		res, err := tx.ExecContext(ctx, `DELETE FROM epoch_branches WHERE name = ?`, name)
 		if err != nil {
-			_ = tx.Rollback()
+			return err
 		}
-	}()
-	res, err := tx.ExecContext(ctx, `DELETE FROM epoch_branches WHERE name = ?`, name)
-	if err != nil {
+		if n, err := res.RowsAffected(); err != nil {
+			return err
+		} else if n == 0 {
+			return fmt.Errorf("%w: %q", epoch.ErrBranchNotFound, name)
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM epoch_commits WHERE branch = ?`, name); err != nil {
+			return err
+		}
+		_, err = tx.ExecContext(ctx, `DELETE FROM epoch_snapshots WHERE branch = ?`, name)
 		return err
-	}
-	if n, err := res.RowsAffected(); err != nil {
-		return err
-	} else if n == 0 {
-		return fmt.Errorf("%w: %q", epoch.ErrBranchNotFound, name)
-	}
-	if _, err = tx.ExecContext(ctx, `DELETE FROM epoch_commits WHERE branch = ?`, name); err != nil {
-		return err
-	}
-	if _, err = tx.ExecContext(ctx, `DELETE FROM epoch_snapshots WHERE branch = ?`, name); err != nil {
-		return err
-	}
-	return tx.Commit()
+	})
 }
 
 func (s *Store) SaveSnapshot(ctx context.Context, snap epoch.Snapshot) error {
 	// Check and write in one statement, so a snapshot can never outlive a
 	// concurrently deleted branch and attach to a re-created one.
-	res, err := s.w.ExecContext(ctx, `
+	res, err := s.wr().ExecContext(ctx, `
 		INSERT OR REPLACE INTO epoch_snapshots (branch, model, stream, key, seq, version, state)
 		SELECT ?, ?, ?, ?, ?, ?, ?
 		WHERE ? = ? OR EXISTS (SELECT 1 FROM epoch_branches WHERE name = ?)`,
@@ -416,7 +492,7 @@ func (s *Store) LoadSnapshot(ctx context.Context, branch, model, stream, key str
 	query += ` ORDER BY seq DESC LIMIT 1`
 	snap := epoch.Snapshot{Branch: branch, Model: model, Stream: stream, Key: key}
 	var state []byte
-	err := s.r.QueryRowContext(ctx, query, args...).Scan(&snap.Seq, &snap.Version, &state)
+	err := s.rd().QueryRowContext(ctx, query, args...).Scan(&snap.Seq, &snap.Version, &state)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}

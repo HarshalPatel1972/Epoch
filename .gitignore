@@ -1,0 +1,8 @@
+*.test
+*.test.exe
+*.out
+*.prof
+*.db
+*.db-shm
+*.db-wal
+/bin/

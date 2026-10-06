@@ -63,7 +63,7 @@ var (
 func evolve(p Product, e any) Product {
 	switch e := e.(type) {
 	case ProductAdded:
-		p = Product{Name: e.Name, Price: e.Price, Stock: e.Stock}
+		p = Product(e)
 	case Restocked:
 		p.Stock += e.Qty
 	case PriceChanged:

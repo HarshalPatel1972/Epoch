@@ -11,3 +11,7 @@ import (
 func TestConformance(t *testing.T) {
 	epochtest.Run(t, func(*testing.T) epoch.Store { return memstore.New() })
 }
+
+func BenchmarkMemstore(b *testing.B) {
+	epochtest.Bench(b, func(*testing.B) epoch.Store { return memstore.New() })
+}

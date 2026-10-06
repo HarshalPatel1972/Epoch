@@ -197,7 +197,7 @@ func Replay(ctx context.Context, s Store, o ReplayOptions) (*Report, error) {
 		if _, dup := replayers[m.ModelName()]; dup {
 			return nil, fmt.Errorf("epoch: model %q passed to Replay twice", m.ModelName())
 		}
-		if replayers[m.ModelName()], err = m.newReplayer(ctx, s, l); err != nil {
+		if replayers[m.ModelName()], err = m.newReplayer(l); err != nil {
 			return nil, err
 		}
 	}
@@ -213,28 +213,36 @@ func Replay(ctx context.Context, s Store, o ReplayOptions) (*Report, error) {
 		if len(page) == 0 {
 			break
 		}
-		for _, orig := range page {
-			if err := ctx.Err(); err != nil {
-				return nil, err
+		// Each page is written in one transaction when the store supports it.
+		err = batch(ctx, s, func(bs Store) error {
+			for _, orig := range page {
+				if err := ctx.Err(); err != nil {
+					return err
+				}
+				var out Commit
+				var err error
+				rp, ok := replayers[orig.Model]
+				switch {
+				case ok && orig.Command != nil:
+					out, err = rp.redo(ctx, bs, orig)
+					rep.Replayed++
+				case ok:
+					out, err = rp.copy(ctx, bs, orig)
+				default:
+					out, err = copyCommit(ctx, bs, l, orig, bases)
+				}
+				if err != nil {
+					return fmt.Errorf("epoch: replaying commit %d (%s/%s): %w", orig.Seq, orig.Model, orig.Stream, err)
+				}
+				rep.Commits++
+				rep.add(orig, out)
 			}
-			cursor = orig.Seq
-			var out Commit
-			rp, ok := replayers[orig.Model]
-			switch {
-			case ok && orig.Command != nil:
-				out, err = rp.redo(ctx, orig)
-				rep.Replayed++
-			case ok:
-				out, err = rp.copy(ctx, orig)
-			default:
-				out, err = copyCommit(ctx, s, l, orig, bases)
-			}
-			if err != nil {
-				return nil, fmt.Errorf("epoch: replaying commit %d (%s/%s): %w", orig.Seq, orig.Model, orig.Stream, err)
-			}
-			rep.Commits++
-			rep.add(orig, out)
+			return nil
+		})
+		if err != nil {
+			return nil, err
 		}
+		cursor = page[len(page)-1].Seq
 	}
 	done = true
 	return rep, nil
@@ -287,35 +295,34 @@ func replica(orig Commit, branch string) Commit {
 // replayer re-executes or copies one model's commits on a replay branch,
 // keeping stream states in memory so each command does not reload history.
 type replayer interface {
-	redo(ctx context.Context, orig Commit) (Commit, error)
-	copy(ctx context.Context, orig Commit) (Commit, error)
+	redo(ctx context.Context, s Store, orig Commit) (Commit, error)
+	copy(ctx context.Context, s Store, orig Commit) (Commit, error)
 }
 
 type modelReplayer[S any] struct {
 	m      *Model[S]
-	s      Store
 	l      lineage
 	mt     *modelTypes
 	states map[string]loaded[S]
 }
 
-func (m *Model[S]) newReplayer(_ context.Context, s Store, l lineage) (replayer, error) {
+func (m *Model[S]) newReplayer(l lineage) (replayer, error) {
 	mt, err := m.types()
 	if err != nil {
 		return nil, err
 	}
-	return &modelReplayer[S]{m: m, s: s, l: l, mt: mt, states: map[string]loaded[S]{}}, nil
+	return &modelReplayer[S]{m: m, l: l, mt: mt, states: map[string]loaded[S]{}}, nil
 }
 
-func (r *modelReplayer[S]) state(ctx context.Context, id string) (loaded[S], error) {
+func (r *modelReplayer[S]) state(ctx context.Context, s Store, id string) (loaded[S], error) {
 	if st, ok := r.states[id]; ok {
 		return st, nil
 	}
-	return r.m.load(ctx, r.s, r.l, r.mt, id, unbounded)
+	return r.m.load(ctx, s, r.l, r.mt, id, unbounded)
 }
 
-func (r *modelReplayer[S]) redo(ctx context.Context, orig Commit) (Commit, error) {
-	st, err := r.state(ctx, orig.Stream)
+func (r *modelReplayer[S]) redo(ctx context.Context, s Store, orig Commit) (Commit, error) {
+	st, err := r.state(ctx, s, orig.Stream)
 	if err != nil {
 		return Commit{}, err
 	}
@@ -325,7 +332,7 @@ func (r *modelReplayer[S]) redo(ctx context.Context, orig Commit) (Commit, error
 	}
 	c := replica(orig, r.l.leaf.Name)
 	c.Events, c.Rejected = nil, ""
-	res, err := r.m.decideAndAppend(ctx, r.s, r.l, r.mt, st, cmd, &c)
+	res, err := r.m.decideAndAppend(ctx, s, r.l, r.mt, st, cmd, &c)
 	switch {
 	case errors.Is(err, ErrRejected):
 		st.Seq = c.Seq
@@ -338,13 +345,13 @@ func (r *modelReplayer[S]) redo(ctx context.Context, orig Commit) (Commit, error
 	return c, nil
 }
 
-func (r *modelReplayer[S]) copy(ctx context.Context, orig Commit) (Commit, error) {
-	st, err := r.state(ctx, orig.Stream)
+func (r *modelReplayer[S]) copy(ctx context.Context, s Store, orig Commit) (Commit, error) {
+	st, err := r.state(ctx, s, orig.Stream)
 	if err != nil {
 		return Commit{}, err
 	}
 	c := replica(orig, r.l.leaf.Name)
-	if err := r.s.Append(ctx, &c, AppendCondition{ExpectedVersion: Any, BaseVersion: st.base, MinTime: r.l.leaf.ForkTime}); err != nil {
+	if err := s.Append(ctx, &c, AppendCondition{ExpectedVersion: Any, BaseVersion: st.base, MinTime: r.l.leaf.ForkTime}); err != nil {
 		return Commit{}, err
 	}
 	for _, ed := range c.Events {

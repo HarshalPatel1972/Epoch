@@ -81,3 +81,20 @@ type Store interface {
 	// means no bound) for the branch, model, stream and key, or nil.
 	LoadSnapshot(ctx context.Context, branch, model, stream, key string, maxSeq int64) (*Snapshot, error)
 }
+
+// Batcher is an optional Store extension for writing many commits in one
+// transaction. Replay uses it when available.
+//
+// Batch calls fn with a Store whose reads see the batch's own writes. If fn
+// returns an error, nothing it wrote is kept.
+type Batcher interface {
+	Batch(ctx context.Context, fn func(Store) error) error
+}
+
+// batch runs fn in a Batch if s supports it, and directly otherwise.
+func batch(ctx context.Context, s Store, fn func(Store) error) error {
+	if b, ok := s.(Batcher); ok {
+		return b.Batch(ctx, fn)
+	}
+	return fn(s)
+}

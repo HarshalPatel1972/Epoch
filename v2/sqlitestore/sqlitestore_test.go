@@ -65,3 +65,14 @@ func TestDataSurvivesReopen(t *testing.T) {
 		t.Fatalf("append after reopen: seq %d, %v", c2.Seq, err)
 	}
 }
+
+func BenchmarkSQLite(b *testing.B) {
+	epochtest.Bench(b, func(b *testing.B) epoch.Store {
+		s, err := sqlitestore.Open(filepath.Join(b.TempDir(), "bench.db"))
+		if err != nil {
+			b.Fatal(err)
+		}
+		b.Cleanup(func() { s.Close() })
+		return s
+	})
+}

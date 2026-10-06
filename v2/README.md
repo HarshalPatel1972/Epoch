@@ -22,7 +22,7 @@ $ go run ./examples/shop
    revenue                 $544,745.70    $501,329.30    -$43,416.40
 ```
 
-![Epoch Studio](v2/docs/studio.png)
+![Epoch Studio](docs/studio.png)
 
 The core library has **zero dependencies** and needs Go 1.22 or newer. Storage is pluggable: an in-memory store and a pure-Go SQLite store (no cgo) are included, and a conformance suite lets you add your own.
 
@@ -173,7 +173,7 @@ Studio has no authentication of its own and shows your full history. Mount it be
 
 | | |
 |---|---|
-| ![Replay report](v2/docs/studio-replay.png) | ![Compare branches](v2/docs/studio-compare.png) |
+| ![Replay report](docs/studio-replay.png) | ![Compare branches](docs/studio-compare.png) |
 
 ## Storage
 
@@ -233,12 +233,12 @@ SQLite writes use one serialised writer, which suits a single application node. 
 
 Epoch v2 is new. The API is stable in shape, but may change before `v2.0.0` based on feedback. Pin a version, and please [open an issue](https://github.com/HarshalPatel1972/epoch/issues) with anything that gets in your way.
 
-Epoch v2 lives in [`v2/`](v2). Epoch v1, a demo HTTP server, is still in the repository root but is no longer developed; its documentation is in [LEGACY_V1.md](LEGACY_V1.md).
+Epoch v1, a demo HTTP server, is no longer developed. Its documentation is in [LEGACY_V1.md](https://github.com/HarshalPatel1972/epoch/blob/main/LEGACY_V1.md).
 
 ## Contributing
 
-Bug reports, store implementations and examples are very welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Bug reports, store implementations and examples are very welcome. See [CONTRIBUTING.md](https://github.com/HarshalPatel1972/epoch/blob/main/CONTRIBUTING.md).
 
 ## License
 
-[MIT](LICENSE)
+[MIT](https://github.com/HarshalPatel1972/epoch/blob/main/LICENSE)
