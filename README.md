@@ -233,7 +233,7 @@ SQLite writes use one serialised writer, which suits a single application node. 
 
 Epoch v2 is new. The API is stable in shape, but may change before `v2.0.0` based on feedback. Pin a version, and please [open an issue](https://github.com/HarshalPatel1972/epoch/issues) with anything that gets in your way.
 
-Epoch v2 lives in [`v2/`](v2). Epoch v1, a demo HTTP server, is still in the repository root but is no longer developed; its documentation is in [LEGACY_V1.md](LEGACY_V1.md).
+Epoch v2 lives in [`v2/`](v2). Epoch v1, an earlier demo HTTP server, has been retired; its code is preserved at the `v1-final` tag.
 
 ## Contributing
 

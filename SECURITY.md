@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Security fixes are made to the latest release of Epoch v2. Epoch v1 (the demo server in the repository root) is no longer maintained.
+Security fixes are made to the latest release of Epoch v2. Epoch v1 has been retired and is not maintained.
 
 ## Reporting a vulnerability
 

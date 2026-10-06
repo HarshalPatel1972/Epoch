@@ -2,7 +2,7 @@
 
 ## v2.0.0 (unreleased)
 
-Epoch v2 is a rewrite. v1 was a demo HTTP server for one hard-coded product type; v2 is a general-purpose Go library. It records commands as well as events, so history can be branched and re-run under new business rules.
+Epoch v2 is a rewrite. v1 was a demo HTTP server for one hard-coded product type; v2 is a general-purpose Go library that records commands as well as events, so history can be branched and re-run under new business rules. The v1 code has been removed from the repository and is preserved at the `v1-final` tag.
 
 ### Added
 
