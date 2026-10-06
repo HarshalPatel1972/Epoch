@@ -3,7 +3,7 @@ module github.com/HarshalPatel1972/epoch/v2/sqlitestore
 go 1.25.0
 
 require (
-	github.com/HarshalPatel1972/epoch/v2 v2.0.0-00010101000000-000000000000
+	github.com/HarshalPatel1972/epoch/v2 v2.0.0-beta.1
 	modernc.org/sqlite v1.59.0
 )
 
