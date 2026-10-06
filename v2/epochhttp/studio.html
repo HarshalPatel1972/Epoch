@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Epoch Studio</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%236d5efc' stroke-width='3'/%3E%3Cpath d='M16 8v8l5 4' fill='none' stroke='%236d5efc' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #f7f7fb; --panel: #ffffff; --ink: #16161d; --muted: #6b6b7b; --line: #e4e4ec;
+  --accent: #6d5efc; --accent-soft: #ecebff; --good: #12a150; --good-soft: #e3f6eb;
+  --bad: #d93a3a; --bad-soft: #fde8e8; --warn: #b7791f; --warn-soft: #fdf3dc;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --radius: 10px; --shadow: 0 1px 2px rgba(20,20,40,.06), 0 1px 8px rgba(20,20,40,.04);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f0f14; --panel: #17171f; --ink: #ececf3; --muted: #9a9aae; --line: #2a2a36;
+    --accent: #8b7fff; --accent-soft: #25224a; --good: #3ccf7d; --good-soft: #13301f;
+    --bad: #ff6b6b; --bad-soft: #3a1818; --warn: #f0b44c; --warn-soft: #3a2c10;
+    --shadow: none;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
+button, input, select { font: inherit; color: inherit; }
+header { display: flex; align-items: center; gap: 16px; padding: 10px 20px; background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 2; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 650; letter-spacing: -.01em; }
+.brand svg { width: 22px; height: 22px; }
+.time { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 280px; }
+.time input[type=range] { flex: 1; accent-color: var(--accent); }
+.time .when { font-family: var(--mono); font-size: 13px; min-width: 150px; text-align: right; }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 550; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+.pill.good { background: var(--good-soft); color: var(--good); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.btn { border: 1px solid var(--line); background: var(--panel); padding: 5px 12px; border-radius: 8px; cursor: pointer; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn:disabled { opacity: .5; cursor: default; }
+main { display: grid; grid-template-columns: 250px 1fr; gap: 16px; padding: 16px 20px; max-width: 1500px; margin: 0 auto; }
+@media (max-width: 820px) { main { grid-template-columns: 1fr; padding: 12px 16px; } }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.card h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0; padding: 12px 14px 8px; font-weight: 600; }
+.branches { padding-bottom: 8px; }
+.branch { display: flex; align-items: center; gap: 8px; padding: 6px 14px; cursor: pointer; border-left: 3px solid transparent; }
+.branch:hover { background: var(--bg); }
+.branch.active { border-left-color: var(--accent); background: var(--accent-soft); }
+.branch .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: 13px; }
+.branch .desc { color: var(--muted); font-size: 12px; }
+.side-actions { padding: 8px 14px 4px; display: flex; gap: 8px; }
+.chart { padding: 12px 14px 6px; }
+.chart svg { width: 100%; height: 90px; display: block; cursor: crosshair; }
+.chart .legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); padding-top: 4px; }
+.chart .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.tabs { display: flex; gap: 2px; padding: 0 10px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tab { padding: 10px 12px; cursor: pointer; border-bottom: 2px solid transparent; color: var(--muted); white-space: nowrap; background: none; border-top: 0; border-left: 0; border-right: 0; }
+.tab.active { color: var(--ink); border-bottom-color: var(--accent); font-weight: 550; }
+.panel { padding: 16px; min-height: 300px; }
+.row { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; margin-bottom: 14px; }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+input[type=text], input[type=date], select { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; min-width: 150px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; color: var(--muted); font-weight: 550; font-size: 12px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.mono, .mono { font-family: var(--mono); font-size: 12.5px; }
+tr.click { cursor: pointer; } tr.click:hover td { background: var(--bg); }
+.muted { color: var(--muted); }
+.stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.stat { border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; }
+.stat .k { font-size: 12px; color: var(--muted); }
+.stat .v { font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.kv { display: grid; grid-template-columns: minmax(140px, max-content) 1fr; gap: 0; }
+.kv > div { padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.kv > .k { color: var(--muted); }
+.kv .kv { border-left: 2px solid var(--line); }
+.delta { font-weight: 600; font-variant-numeric: tabular-nums; }
+td.nowrap { white-space: nowrap; }
+pre { margin: 0; font-family: var(--mono); font-size: 12px; white-space: pre-wrap; word-break: break-word; }
+.empty { color: var(--muted); padding: 30px 0; text-align: center; }
+.error { background: var(--bad-soft); color: var(--bad); padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; }
+.notice { background: var(--accent-soft); padding: 10px 12px; border-radius: 8px; margin-bottom: 14px; }
+.checks { display: flex; flex-direction: column; gap: 6px; }
+.checks label { flex-direction: row; align-items: center; gap: 8px; color: var(--ink); font-size: 14px; }
+dialog { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); color: var(--ink); padding: 18px; width: min(420px, 92vw); }
+dialog::backdrop { background: rgba(10,10,20,.4); }
+dialog .row { flex-direction: column; align-items: stretch; }
+.foot { padding: 10px 16px; display: flex; justify-content: center; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="var(--accent)" stroke-width="3"/><path d="M16 8v8l5 4" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/></svg>
+    Epoch Studio
+  </div>
+  <span class="pill" id="branchPill">main</span>
+  <div class="time">
+    <span class="muted">as of</span>
+    <input type="range" id="slider" min="0" max="1000" value="1000" aria-label="Point in time">
+    <span class="when" id="when">now</span>
+    <button class="btn" id="nowBtn">Now</button>
+  </div>
+</header>
+
+<main>
+  <aside>
+    <div class="card branches">
+      <h2>Branches</h2>
+      <div id="branchList"></div>
+      <div class="side-actions"><button class="btn" id="forkBtn">Fork…</button></div>
+    </div>
+  </aside>
+
+  <section>
+    <div class="card chart">
+      <svg id="chart" role="img" aria-label="Commands over time"></svg>
+      <div class="legend"><span><i style="background:var(--accent)"></i>accepted</span><span><i style="background:var(--bad)"></i>rejected</span><span id="chartInfo"></span></div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="tabs" id="tabs"></div>
+      <div class="panel" id="panel"></div>
+    </div>
+  </section>
+</main>
+
+<dialog id="forkDialog">
+  <form method="dialog" id="forkForm">
+    <h3 style="margin:0 0 12px">Fork a branch</h3>
+    <div class="row"><label>Name<input type="text" name="name" required pattern="[A-Za-z0-9][A-Za-z0-9._\-]{0,99}" placeholder="what-if"></label></div>
+    <div class="row"><label>From branch<select name="from" id="forkFrom"></select></label></div>
+    <div class="row"><label>At (leave empty for latest)<input type="date" name="at"></label></div>
+    <div class="row"><label>Description<input type="text" name="description"></label></div>
+    <div class="error" id="forkError" hidden></div>
+    <div class="row" style="flex-direction:row;justify-content:end"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn primary" value="ok">Fork</button></div>
+  </form>
+</dialog>
+
+<script>
+"use strict";
+const $ = (s, el = document) => el.querySelector(s);
+const state = { info: null, branches: [], branch: "main", at: null, timeline: null, tab: "views" };
+
+// h builds DOM nodes. Strings become text nodes, so data is never parsed as HTML.
+function h(tag, attrs = {}, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (k === "class") el.className = v;
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid instanceof Node ? kid : String(kid));
+  return el;
+}
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, { ...opts, headers: { "X-Epoch-Studio": "1", ...(opts.body ? { "Content-Type": "application/json" } : {}), ...(opts.headers || {}) } });
+  if (res.status === 204) return null;
+  const body = await res.json().catch(() => ({ error: res.statusText }));
+  if (!res.ok) throw new Error(body.error || res.statusText);
+  return body;
+}
+
+function qs(extra = {}) {
+  const p = new URLSearchParams();
+  p.set("branch", state.branch);
+  if (state.at) p.set("at", state.at);
+  for (const [k, v] of Object.entries(extra)) if (v != null && v !== "") p.set(k, v);
+  return p.toString();
+}
+
+const fmtTime = t => new Date(t).toLocaleString(undefined, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+const fmtNum = v => typeof v === "number" ? v.toLocaleString() : v;
+const isMoneyKey = k => /revenue|discount|price|total|amount/i.test(k);
+function fmtVal(key, v) {
+  if (typeof v === "number" && isMoneyKey(key) && Number.isInteger(v)) return (v / 100).toLocaleString(undefined, { style: "currency", currency: "USD" });
+  if (typeof v === "number") return v.toLocaleString();
+  if (v === null || v === undefined) return "—";
+  if (typeof v === "object") return JSON.stringify(v);
+  return String(v);
+}
+
+// ---------- branches ----------
+
+async function loadBranches() {
+  state.branches = await api("api/branches");
+  if (!state.branches.some(b => b.name === state.branch)) state.branch = "main";
+  renderBranches();
+}
+
+function renderBranches() {
+  const list = $("#branchList");
+  list.replaceChildren();
+  const children = name => state.branches.filter(b => b.name !== "main" && (b.parent || "main") === name);
+  const add = (b, depth) => {
+    const kind = b.name === "main" ? null : b.kind === "replay" ? h("span", { class: "pill warn" }, "replay") : h("span", { class: "pill" }, "fork");
+    list.append(h("div", {
+      class: "branch" + (b.name === state.branch ? " active" : ""), style: `padding-left:${14 + depth * 16}px`, title: b.description || "",
+      onclick: () => selectBranch(b.name),
+    }, h("span", { class: "name" }, (depth ? "↳ " : "") + b.name), kind));
+    for (const c of children(b.name)) add(c, depth + 1);
+  };
+  add(state.branches.find(b => b.name === "main"), 0);
+  $("#forkBtn").hidden = !state.info.allow_writes;
+}
+
+async function selectBranch(name) {
+  state.branch = name;
+  state.at = null;
+  $("#branchPill").textContent = name;
+  renderBranches();
+  const b = current();
+  if (b.kind === "replay" && state.tab !== "report") state.tab = "report";
+  else if (b.kind !== "replay" && state.tab === "report") state.tab = "views";
+  await refresh();
+}
+
+const current = () => state.branches.find(b => b.name === state.branch) || { name: "main" };
+
+// ---------- timeline ----------
+
+async function loadTimeline() {
+  const p = new URLSearchParams({ branch: state.branch, buckets: 120 });
+  state.timeline = await api("api/timeline?" + p);
+  renderChart();
+  syncSlider();
+}
+
+function renderChart() {
+  const svg = $("#chart"), tl = state.timeline;
+  svg.replaceChildren();
+  const W = svg.clientWidth || 800, H = 90;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  if (!tl.commits) { $("#chartInfo").textContent = "no history yet"; return; }
+  const n = tl.buckets.length, bw = W / n;
+  const maxV = Math.max(1, ...tl.buckets.map(b => b.accepted + b.rejected));
+  const ns = "http://www.w3.org/2000/svg";
+  const rect = (x, y, w, hgt, fill) => { const r = document.createElementNS(ns, "rect"); Object.entries({ x, y, width: w, height: hgt, fill, rx: 1 }).forEach(([k, v]) => r.setAttribute(k, v)); svg.append(r); };
+  tl.buckets.forEach((b, i) => {
+    const ha = (b.accepted / maxV) * (H - 10), hr = (b.rejected / maxV) * (H - 10);
+    rect(i * bw + 1, H - ha, Math.max(1, bw - 2), ha, "var(--accent)");
+    if (hr) rect(i * bw + 1, H - ha - hr, Math.max(1, bw - 2), hr, "var(--bad)");
+  });
+  if (state.at) {
+    const f = (new Date(state.at) - new Date(tl.first)) / Math.max(1, new Date(tl.last) - new Date(tl.first));
+    const x = Math.max(0, Math.min(1, f)) * W;
+    const line = document.createElementNS(ns, "line");
+    Object.entries({ x1: x, x2: x, y1: 0, y2: H, stroke: "var(--ink)", "stroke-width": 1.5, "stroke-dasharray": "3 3" }).forEach(([k, v]) => line.setAttribute(k, v));
+    svg.append(line);
+  }
+  $("#chartInfo").textContent = `${tl.commits.toLocaleString()} commits · ${fmtTime(tl.first)} → ${fmtTime(tl.last)}` + (tl.truncated ? " (truncated)" : "");
+}
+
+function syncSlider() {
+  const tl = state.timeline, s = $("#slider");
+  if (!state.at || !tl.commits) { s.value = 1000; $("#when").textContent = "now"; return; }
+  const f = (new Date(state.at) - new Date(tl.first)) / Math.max(1, new Date(tl.last) - new Date(tl.first));
+  s.value = Math.round(Math.max(0, Math.min(1, f)) * 1000);
+  $("#when").textContent = fmtTime(state.at);
+}
+
+function setTimeFraction(f) {
+  const tl = state.timeline;
+  if (!tl || !tl.commits) return;
+  if (f >= 0.999) { state.at = null; }
+  else {
+    const t = new Date(new Date(tl.first).getTime() + f * (new Date(tl.last) - new Date(tl.first)));
+    state.at = t.toISOString();
+  }
+  syncSlider();
+  renderChart();
+}
+
+let sliderTimer;
+$("#slider").addEventListener("input", e => {
+  setTimeFraction(e.target.value / 1000);
+  clearTimeout(sliderTimer);
+  sliderTimer = setTimeout(renderTab, 150);
+});
+$("#chart").addEventListener("click", e => {
+  const r = e.currentTarget.getBoundingClientRect();
+  setTimeFraction((e.clientX - r.left) / r.width);
+  renderTab();
+});
+$("#nowBtn").addEventListener("click", () => { state.at = null; syncSlider(); renderChart(); renderTab(); });
+addEventListener("resize", () => state.timeline && renderChart());
+
+// ---------- tabs ----------
+
+const TABS = [
+  ["views", "Views"], ["log", "Log"], ["entity", "Entity"], ["compare", "Compare"], ["replay", "Replay"], ["report", "Replay report"],
+];
+
+function renderTabs() {
+  const tabs = $("#tabs");
+  tabs.replaceChildren();
+  for (const [id, label] of TABS) {
+    if (id === "report" && current().kind !== "replay") continue;
+    tabs.append(h("button", { class: "tab" + (state.tab === id ? " active" : ""), onclick: () => { state.tab = id; renderTabs(); renderTab(); } }, label));
+  }
+}
+
+async function renderTab() {
+  saveHash();
+  const panel = $("#panel");
+  const tab = state.tab;
+  try {
+    const node = await ({ views: viewsTab, log: logTab, entity: entityTab, compare: compareTab, replay: replayTab, report: reportTab })[tab]();
+    if (state.tab === tab) panel.replaceChildren(node);
+  } catch (err) {
+    if (state.tab === tab) panel.replaceChildren(h("div", { class: "error" }, err.message));
+  }
+}
+
+function errorBox(err) { return h("div", { class: "error" }, err.message || String(err)); }
+
+// Render any JSON value as nested key/value rows. Values under a money-like
+// key (revenue_by_product.*) are formatted as money too.
+function kv(value, key = "", money = false) {
+  money = money || isMoneyKey(key);
+  if (value === null || typeof value !== "object") return h("span", { class: "mono" }, fmtVal(money ? "amount" : key, value));
+  const entries = Array.isArray(value) ? value.map((v, i) => [String(i), v]) : Object.entries(value);
+  if (!entries.length) return h("span", { class: "muted" }, Array.isArray(value) ? "empty list" : "empty");
+  const grid = h("div", { class: "kv" });
+  for (const [k, v] of entries) grid.append(h("div", { class: "k" }, k), h("div", {}, kv(v, k, money)));
+  return grid;
+}
+
+// ---------- Views ----------
+
+let viewName = null;
+async function viewsTab() {
+  const names = state.info.projections;
+  if (!names.length) return h("div", { class: "empty" }, "No projections are registered. Pass them in epochhttp.Config.Projections.");
+  viewName = viewName && names.includes(viewName) ? viewName : names[0];
+  const sel = h("select", { onchange: e => { viewName = e.target.value; renderTab(); } }, names.map(n => h("option", { value: n, selected: n === viewName }, n)));
+  const value = await api(`api/views/${encodeURIComponent(viewName)}?` + qs());
+  const stats = h("div", { class: "stats" });
+  const rest = {};
+  for (const [k, v] of Object.entries(value || {})) {
+    if (typeof v === "number") stats.append(h("div", { class: "stat" }, h("div", { class: "k" }, k.replaceAll("_", " ")), h("div", { class: "v" }, fmtVal(k, v))));
+    else rest[k] = v;
+  }
+  return h("div", {}, h("div", { class: "row" }, h("label", {}, "Projection", sel), h("span", { class: "muted" }, state.at ? `as of ${fmtTime(state.at)}` : "current state", " on ", h("span", { class: "mono" }, state.branch))),
+    stats.childElementCount ? stats : null, Object.keys(rest).length ? kv(rest) : null);
+}
+
+// ---------- Log ----------
+
+function outcome(c) {
+  if (c.rejected) return h("span", {}, h("span", { class: "pill bad" }, "rejected"), " ", h("span", { class: "muted" }, c.rejected));
+  if (!c.events || !c.events.length) return h("span", { class: "pill" }, "no events");
+  return h("span", {}, c.events.map(e => h("span", { class: "pill good", style: "margin-right:4px" }, e.type)));
+}
+
+function commitRow(c, onclick) {
+  return h("tr", { class: "click", onclick: onclick || (() => openEntity(c.model, c.stream)) },
+    h("td", { class: "num mono" }, c.seq), h("td", { class: "mono nowrap" }, fmtTime(c.time)),
+    h("td", { class: "mono nowrap" }, `${c.model}/${c.stream}`),
+    h("td", { class: "mono", title: c.command ? JSON.stringify(c.command.data) : "" }, c.command ? c.command.type : h("span", { class: "muted" }, "fact")),
+    h("td", {}, outcome(c)));
+}
+
+async function logTab() {
+  const table = h("table", {}, h("thead", {}, h("tr", {}, h("th", { class: "num" }, "seq"), h("th", {}, "time"), h("th", {}, "entity"), h("th", {}, "command"), h("th", {}, "outcome"))));
+  const body = h("tbody");
+  table.append(body);
+  let after = 0;
+  const more = h("button", { class: "btn" }, "Load more");
+  const load = async () => {
+    more.disabled = true;
+    const page = await api("api/log?" + qs({ after, limit: 100 }));
+    page.forEach(c => body.append(commitRow(c)));
+    if (page.length) after = page[page.length - 1].seq;
+    more.disabled = page.length < 100;
+    more.textContent = page.length < 100 ? "End of history" : "Load more";
+  };
+  more.onclick = () => load().catch(e => more.replaceWith(errorBox(e)));
+  await load();
+  if (!body.childElementCount) return h("div", { class: "empty" }, "No commits on this branch at this time.");
+  return h("div", {}, table, h("div", { class: "foot" }, more));
+}
+
+// ---------- Entity ----------
+
+const entitySel = { model: null, id: "" };
+function openEntity(model, id) {
+  entitySel.model = model; entitySel.id = id; state.tab = "entity"; renderTabs(); renderTab();
+}
+
+async function entityTab() {
+  const models = state.info.models;
+  if (!models.length) return h("div", { class: "empty" }, "No models are registered. Pass them in epochhttp.Config.Models.");
+  entitySel.model = entitySel.model && models.includes(entitySel.model) ? entitySel.model : models[0];
+  const sel = h("select", {}, models.map(m => h("option", { value: m, selected: m === entitySel.model }, m)));
+  const input = h("input", { type: "text", value: entitySel.id, placeholder: "entity id" });
+  const form = h("form", { class: "row", onsubmit: e => { e.preventDefault(); entitySel.model = sel.value; entitySel.id = input.value.trim(); renderTab(); } },
+    h("label", {}, "Model", sel), h("label", {}, "ID", input), h("button", { class: "btn primary" }, "Load"));
+  if (!entitySel.id) return h("div", {}, form, h("div", { class: "empty" }, "Enter an entity id, or click a row in the Log."));
+  let data;
+  try { data = await api(`api/entities/${encodeURIComponent(entitySel.model)}/${encodeURIComponent(entitySel.id)}?` + qs()); }
+  catch (e) { return h("div", {}, form, errorBox(e)); }
+  const st = data.state;
+  const hist = h("table", {}, h("thead", {}, h("tr", {}, h("th", { class: "num" }, "seq"), h("th", {}, "time"), h("th", {}, "entity"), h("th", {}, "command"), h("th", {}, "outcome"))),
+    h("tbody", {}, data.history.slice().reverse().map(c => commitRow(c, () => {}))));
+  return h("div", {}, form,
+    h("div", { class: "stats" }, h("div", { class: "stat" }, h("div", { class: "k" }, "version"), h("div", { class: "v" }, st.version)),
+      h("div", { class: "stat" }, h("div", { class: "k" }, "commits"), h("div", { class: "v" }, data.history.length))),
+    st.version ? kv(st.value) : h("div", { class: "notice" }, "This entity does not exist at this point in history."),
+    h("h3", { style: "font-size:14px;margin:20px 0 8px" }, "History"), data.history.length ? hist : h("div", { class: "muted" }, "None."));
+}
+
+// ---------- Compare ----------
+
+const cmpSel = { view: null, a: "main", b: null };
+async function compareTab() {
+  const names = state.info.projections;
+  if (!names.length) return h("div", { class: "empty" }, "No projections are registered.");
+  if (state.branches.length < 2) return h("div", { class: "empty" }, "Create a fork or run a replay to compare branches.");
+  cmpSel.view = cmpSel.view && names.includes(cmpSel.view) ? cmpSel.view : names[0];
+  if (!cmpSel.b || !state.branches.some(b => b.name === cmpSel.b)) cmpSel.b = state.branch !== "main" ? state.branch : state.branches[1].name;
+  const opt = sel => state.branches.map(b => h("option", { value: b.name, selected: b.name === sel }, b.name));
+  const v = h("select", {}, names.map(n => h("option", { value: n, selected: n === cmpSel.view }, n)));
+  const a = h("select", {}, opt(cmpSel.a)), b = h("select", {}, opt(cmpSel.b));
+  const form = h("form", { class: "row", onsubmit: e => { e.preventDefault(); Object.assign(cmpSel, { view: v.value, a: a.value, b: b.value }); renderTab(); } },
+    h("label", {}, "Projection", v), h("label", {}, "Branch A", a), h("label", {}, "Branch B", b), h("button", { class: "btn primary" }, "Compare"));
+  const p = new URLSearchParams({ a: cmpSel.a, b: cmpSel.b });
+  if (state.at) p.set("at", state.at);
+  const res = await api(`api/compare/${encodeURIComponent(cmpSel.view)}?` + p);
+  if (!res.changes.length) return h("div", {}, form, h("div", { class: "empty" }, "No differences."));
+  const show = (key, v) => v === undefined ? "—" : fmtVal(key, v);
+  const rows = res.changes.map(c => {
+    // The whole path decides formatting: revenue_by_product["x"] is money.
+    const leaf = isMoneyKey(c.path) ? "amount" : c.path;
+    let delta = h("span", { class: "pill" }, c.kind);
+    if (typeof c.from === "number" && typeof c.to === "number") {
+      const d = c.to - c.from;
+      // Not coloured: whether a difference is good depends on the metric.
+      delta = h("span", { class: "delta" }, (d > 0 ? "+" : "") + fmtVal(leaf, d));
+    }
+    return h("tr", {}, h("td", { class: "mono" }, c.path), h("td", { class: "num mono" }, show(leaf, c.from)),
+      h("td", { class: "num mono" }, show(leaf, c.to)), h("td", { class: "num" }, delta));
+  });
+  return h("div", {}, form, h("table", {}, h("thead", {}, h("tr", {}, h("th", {}, "path"), h("th", { class: "num" }, cmpSel.a), h("th", { class: "num" }, cmpSel.b), h("th", { class: "num" }, "difference"))), h("tbody", {}, rows)));
+}
+
+// ---------- Replay ----------
+
+async function replayTab() {
+  const info = state.info;
+  const intro = h("div", { class: "notice" }, "A replay forks ", h("b", {}, state.branch), " at a point in the past and re-decides every recorded command after it with different rules. Your main timeline is never modified.");
+  if (!info.allow_writes) return h("div", {}, intro, h("div", { class: "empty" }, "Replays are disabled. Set epochhttp.Config.AllowWrites to enable them."));
+  if (!info.policies.length) return h("div", {}, intro, h("div", { class: "empty" }, "No alternative policies are registered. Pass them in epochhttp.Config.Policies."));
+  const name = h("input", { type: "text", required: true, pattern: "[A-Za-z0-9][A-Za-z0-9._\\-]{0,99}", placeholder: "e.g. backorders-april" });
+  const from = h("input", { type: "date" }), to = h("input", { type: "date" });
+  const checks = h("div", { class: "checks" }, info.policies.map(p => h("label", {}, h("input", { type: "checkbox", value: p.label }), p.label, h("span", { class: "muted" }, ` (${p.model})`))));
+  const out = h("div");
+  const btn = h("button", { class: "btn primary" }, "Run replay");
+  const form = h("form", { onsubmit: async e => {
+    e.preventDefault();
+    const policies = [...checks.querySelectorAll("input:checked")].map(i => i.value);
+    btn.disabled = true; btn.textContent = "Replaying…"; out.replaceChildren();
+    try {
+      const rep = await api("api/replays", { method: "POST", body: JSON.stringify({ name: name.value, source: state.branch, from: from.value, to: to.value, policies }) });
+      await loadBranches();
+      out.replaceChildren(report(rep, true));
+    } catch (err) { out.replaceChildren(errorBox(err)); }
+    btn.disabled = false; btn.textContent = "Run replay";
+  } }, h("div", { class: "row" }, h("label", {}, "New branch name", name), h("label", {}, "Replay from (empty: beginning)", from), h("label", {}, "Until (empty: latest)", to)),
+    h("div", { class: "row" }, h("label", {}, "Policies to apply", checks)), h("div", { class: "row" }, btn));
+  return h("div", {}, intro, form, out);
+}
+
+function report(rep, fresh) {
+  const stat = (k, v, cls) => h("div", { class: "stat" }, h("div", { class: "k" }, k), h("div", { class: "v", style: cls ? `color:var(--${cls})` : "" }, fmtNum(v)));
+  const kindPill = k => k === "now_accepted" ? h("span", { class: "pill good" }, "now accepted") : k === "now_rejected" ? h("span", { class: "pill bad" }, "now rejected") : h("span", { class: "pill warn" }, "events changed");
+  const brief = c => c.rejected ? h("span", { class: "muted" }, "rejected: " + c.rejected) : h("span", { class: "mono", title: JSON.stringify(c.events) }, (c.events || []).map(e => `${e.type} ${JSON.stringify(e.data)}`).join(", ") || "no events");
+  const rows = rep.divergences.map(d => h("tr", { class: "click", onclick: () => { state.branch = rep.branch.name; openEntity(d.original.model, d.original.stream); } },
+    h("td", { class: "mono nowrap" }, fmtTime(d.original.time)), h("td", { class: "mono nowrap" }, `${d.original.model}/${d.original.stream}`),
+    h("td", { class: "mono", title: JSON.stringify(d.original.command && d.original.command.data) }, d.original.command ? d.original.command.type : "fact"),
+    h("td", {}, kindPill(d.kind)), h("td", {}, brief(d.original)), h("td", {}, brief(d.replayed))));
+  return h("div", {},
+    fresh ? h("div", { class: "notice" }, "Replay finished. Branch ", h("b", { class: "mono" }, rep.branch.name), " was created — select it, or use Compare to see the impact.") : null,
+    h("div", { class: "stats" }, stat("commits replayed", rep.commits), stat("outcomes changed", rep.diverged, "accent"), stat("now accepted", rep.now_accepted, "good"), stat("now rejected", rep.now_rejected, "bad"), stat("events changed", rep.events_changed, "warn")),
+    rows.length ? h("table", {}, h("thead", {}, h("tr", {}, h("th", {}, "time"), h("th", {}, "entity"), h("th", {}, "command"), h("th", {}, "change"), h("th", {}, "originally"), h("th", {}, "in replay"))), h("tbody", {}, rows))
+      : h("div", { class: "empty" }, "Every command had the same outcome."),
+    rep.truncated ? h("div", { class: "muted", style: "padding-top:8px" }, `Showing the first ${rep.divergences.length} of ${rep.diverged.toLocaleString()} changes.`) : null);
+}
+
+async function reportTab() {
+  const b = current();
+  const rep = await api(`api/replays/${encodeURIComponent(b.name)}`);
+  return h("div", {}, h("div", { class: "notice" }, b.description || "Replay", " — forked from ", h("b", { class: "mono" }, b.parent), b.fork_seq ? ` after commit ${b.fork_seq}` : " at the beginning", "."), report(rep, false));
+}
+
+// ---------- fork dialog ----------
+
+$("#forkBtn").addEventListener("click", () => {
+  const sel = $("#forkFrom");
+  sel.replaceChildren(...state.branches.map(b => h("option", { value: b.name, selected: b.name === state.branch }, b.name)));
+  $("#forkError").hidden = true;
+  $("#forkDialog").showModal();
+});
+$("#forkForm").addEventListener("submit", async e => {
+  if (e.submitter && e.submitter.value === "cancel") return;
+  e.preventDefault();
+  const f = new FormData(e.target);
+  try {
+    await api("api/branches", { method: "POST", body: JSON.stringify({ name: f.get("name"), from: f.get("from"), at: f.get("at"), description: f.get("description") }) });
+    $("#forkDialog").close();
+    e.target.reset();
+    await loadBranches();
+    await selectBranch(f.get("name"));
+  } catch (err) { const box = $("#forkError"); box.textContent = err.message; box.hidden = false; }
+});
+
+// ---------- boot ----------
+
+// The URL hash holds branch, tab and time, so any view can be shared.
+function saveHash() {
+  const p = new URLSearchParams({ branch: state.branch, tab: state.tab });
+  if (state.at) p.set("at", state.at);
+  history.replaceState(null, "", "#" + p);
+}
+
+function loadHash() {
+  const p = new URLSearchParams(location.hash.slice(1));
+  if (p.get("branch")) state.branch = p.get("branch");
+  if (p.get("tab") && TABS.some(([id]) => id === p.get("tab"))) state.tab = p.get("tab");
+  if (p.get("at") && !isNaN(new Date(p.get("at")))) state.at = new Date(p.get("at")).toISOString();
+}
+
+async function refresh() {
+  renderTabs();
+  await loadTimeline();
+  await renderTab();
+}
+
+(async () => {
+  try {
+    state.info = await api("api/info");
+    loadHash();
+    const at = state.at;
+    await loadBranches();
+    $("#branchPill").textContent = state.branch;
+    if (state.tab === "report" && current().kind !== "replay") state.tab = "views";
+    state.at = at;
+    await refresh();
+  } catch (err) {
+    $("#panel").replaceChildren(errorBox(err));
+  }
+})();
+</script>
+</body>
+</html>

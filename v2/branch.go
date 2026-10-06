@@ -2,7 +2,6 @@ package epoch
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math"
 	"regexp"
@@ -253,7 +252,7 @@ func createBranch(ctx context.Context, s Store, name string, o ForkOptions, kind
 // from it must be deleted first.
 func DeleteBranch(ctx context.Context, s Store, name string) error {
 	if name == Main || name == "" {
-		return errors.New("epoch: the main branch cannot be deleted")
+		return fmt.Errorf("%w: the main branch cannot be deleted", ErrInvalidBranchName)
 	}
 	bs, err := s.ListBranches(ctx)
 	if err != nil {
