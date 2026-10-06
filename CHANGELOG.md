@@ -1,6 +1,8 @@
 # Changelog
 
-## v2.0.0 (unreleased)
+## v2.0.0-beta.1 (2026-10-07)
+
+Modules: `github.com/HarshalPatel1972/epoch/v2` v2.0.0-beta.1 and `github.com/HarshalPatel1972/epoch/v2/sqlitestore` v0.1.0-beta.1.
 
 Epoch v2 is a rewrite. v1 was a demo HTTP server for one hard-coded product type; v2 is a general-purpose Go library that records commands as well as events, so history can be branched and re-run under new business rules. The v1 code has been removed from the repository and is preserved at the `v1-final` tag.
 
