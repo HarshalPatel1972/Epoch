@@ -112,6 +112,16 @@ func (s *BadgerEventStore) Append(e Event) (Event, error) {
 		e.OccurredAt = time.Now()
 	}
 
+	if last := s.seq[e.AggregateID]; last > 0 {
+		prev, err := s.get(e.AggregateID, last)
+		if err != nil {
+			return Event{}, err
+		}
+		if e.OccurredAt.Before(prev.OccurredAt) {
+			return Event{}, ErrOutOfOrder
+		}
+	}
+
 	s.seq[e.AggregateID]++
 	e.Version = s.seq[e.AggregateID]
 	s.aggIDs[e.AggregateID] = struct{}{}
@@ -164,18 +174,44 @@ func (s *BadgerEventStore) Load(aggregateID string) ([]Event, error) {
 }
 
 func (s *BadgerEventStore) LoadBefore(aggregateID string, cutoff time.Time) ([]Event, error) {
-	all, err := s.Load(aggregateID)
-	if err != nil {
-		return nil, err
-	}
+	return s.LoadAfter(aggregateID, 0, cutoff)
+}
 
-	var res []Event
-	for _, e := range all {
-		if e.OccurredAt.Before(cutoff) || e.OccurredAt.Equal(cutoff) {
-			res = append(res, e)
+// LoadAfter seeks directly to afterVersion+1 and stops at the first event past
+// cutoff, so a read after a snapshot touches only the events it replays.
+func (s *BadgerEventStore) LoadAfter(aggregateID string, afterVersion int64, cutoff time.Time) ([]Event, error) {
+	var events []Event
+	err := s.db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.Prefix = []byte(fmt.Sprintf("events:%s:", aggregateID))
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		for it.Seek(eventKey(aggregateID, afterVersion+1)); it.Valid(); it.Next() {
+			var e Event
+			if err := it.Item().Value(func(v []byte) error { return json.Unmarshal(v, &e) }); err != nil {
+				return err
+			}
+			if e.OccurredAt.After(cutoff) {
+				break
+			}
+			events = append(events, e)
 		}
-	}
-	return res, nil
+		return nil
+	})
+	return events, err
+}
+
+func (s *BadgerEventStore) get(aggregateID string, version int64) (Event, error) {
+	var e Event
+	err := s.db.View(func(txn *badger.Txn) error {
+		item, err := txn.Get(eventKey(aggregateID, version))
+		if err != nil {
+			return err
+		}
+		return item.Value(func(v []byte) error { return json.Unmarshal(v, &e) })
+	})
+	return e, err
 }
 
 func (s *BadgerEventStore) LoadAll() ([]Event, error) {

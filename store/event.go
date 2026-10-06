@@ -1,8 +1,13 @@
 package store
 
 import (
+	"errors"
 	"time"
 )
+
+// ErrOutOfOrder is returned when an event's OccurredAt is earlier than the
+// previous event of the same aggregate.
+var ErrOutOfOrder = errors.New("event occurred_at is before the aggregate's previous event")
 
 type EventType string
 
@@ -47,6 +52,10 @@ type EventStore interface {
 	Append(e Event) (Event, error)
 	Load(aggregateID string) ([]Event, error)
 	LoadBefore(aggregateID string, cutoff time.Time) ([]Event, error)
+	// LoadAfter returns events with Version > afterVersion and OccurredAt <= cutoff,
+	// in version order. Stores rely on per-aggregate timestamps being monotonic so
+	// the scan can stop at the first event past the cutoff.
+	LoadAfter(aggregateID string, afterVersion int64, cutoff time.Time) ([]Event, error)
 	LoadAll() ([]Event, error)
 	AllAggregateIDs() []string
 	IsReady() bool

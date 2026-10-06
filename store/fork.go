@@ -2,6 +2,7 @@ package store
 
 import (
 	"sort"
+	"sync"
 	"time"
 )
 
@@ -9,6 +10,7 @@ type ForkEventStore struct {
 	main       EventStore        // read-only main
 	overlay    *MemoryEventStore // fork-specific overlay (always Memory)
 	forkedFrom time.Time
+	appendMu   sync.Mutex
 }
 
 func NewForkEventStore(main EventStore, forkedFrom time.Time) *ForkEventStore {
@@ -19,8 +21,30 @@ func NewForkEventStore(main EventStore, forkedFrom time.Time) *ForkEventStore {
 	}
 }
 
+// Append writes to the overlay. Overlay versions continue from the main
+// timeline's last version at the fork point, so version-based filtering
+// (e.g. "events after this snapshot") stays meaningful across both streams.
 func (f *ForkEventStore) Append(e Event) (Event, error) {
+	f.appendMu.Lock()
+	defer f.appendMu.Unlock()
+
+	mainEvts, err := f.main.LoadBefore(e.AggregateID, f.forkedFrom)
+	if err != nil {
+		return Event{}, err
+	}
+	if n := len(mainEvts); n > 0 {
+		f.overlay.ensureSeq(e.AggregateID, mainEvts[n-1].Version)
+		if !e.OccurredAt.IsZero() && e.OccurredAt.Before(mainEvts[n-1].OccurredAt) {
+			return Event{}, ErrOutOfOrder
+		}
+	}
 	return f.overlay.Append(e)
+}
+
+// OverlayCount returns the number of events written to this fork.
+func (f *ForkEventStore) OverlayCount() int {
+	all, _ := f.overlay.LoadAll()
+	return len(all)
 }
 
 func (f *ForkEventStore) Load(aggregateID string) ([]Event, error) {
@@ -30,12 +54,22 @@ func (f *ForkEventStore) Load(aggregateID string) ([]Event, error) {
 }
 
 func (f *ForkEventStore) LoadBefore(aggregateID string, cutoff time.Time) ([]Event, error) {
+	return f.LoadAfter(aggregateID, 0, cutoff)
+}
+
+func (f *ForkEventStore) LoadAfter(aggregateID string, afterVersion int64, cutoff time.Time) ([]Event, error) {
 	mainCutoff := cutoff
 	if f.forkedFrom.Before(cutoff) {
 		mainCutoff = f.forkedFrom
 	}
-	mainEvts, _ := f.main.LoadBefore(aggregateID, mainCutoff)
-	forkEvts, _ := f.overlay.LoadBefore(aggregateID, cutoff)
+	mainEvts, err := f.main.LoadAfter(aggregateID, afterVersion, mainCutoff)
+	if err != nil {
+		return nil, err
+	}
+	forkEvts, err := f.overlay.LoadAfter(aggregateID, afterVersion, cutoff)
+	if err != nil {
+		return nil, err
+	}
 	return mergeEventSlices(mainEvts, forkEvts), nil
 }
 
@@ -94,4 +128,20 @@ func mergeEventSlices(main, fork []Event) []Event {
 	})
 	
 	return res
+}
+
+// ClampedSnapshotStore hides snapshots taken after a fork point. Main-timeline
+// snapshots after forkedFrom include main events the fork must not see.
+type ClampedSnapshotStore struct {
+	Inner SnapshotStore
+	Until time.Time
+}
+
+func (c ClampedSnapshotStore) Save(s Snapshot) error { return nil } // forks never write main snapshots
+
+func (c ClampedSnapshotStore) LatestBefore(aggregateID string, cutoff time.Time) (*Snapshot, error) {
+	if c.Until.Before(cutoff) {
+		cutoff = c.Until
+	}
+	return c.Inner.LatestBefore(aggregateID, cutoff)
 }

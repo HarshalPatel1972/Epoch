@@ -27,33 +27,20 @@ func (p *Projector) Project(aggregateID string, asOf time.Time) (*Product, error
 	}
 
 	product := &Product{}
-	var events []store.Event
+	var after int64
 
 	if snap != nil {
 		if err := json.Unmarshal(snap.State, product); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal snapshot state: %w", err)
 		}
-		// Load only events that happened after the snapshot's recorded version
-		allEvents, err := p.Events.LoadBefore(aggregateID, cutoff)
-		if err != nil {
-			return nil, err
-		}
-		for _, e := range allEvents {
-			if e.Version > snap.Version {
-				events = append(events, e)
-			}
-		}
-	} else {
-		events, err = p.Events.LoadBefore(aggregateID, cutoff)
-		if err != nil {
-			return nil, err
-		}
+		after = snap.Version
 	}
 
-	// Sort events by Version just in case
-	sort.Slice(events, func(i, j int) bool {
-		return events[i].Version < events[j].Version
-	})
+	// Only the events after the snapshot are read from the store.
+	events, err := p.Events.LoadAfter(aggregateID, after, cutoff)
+	if err != nil {
+		return nil, err
+	}
 
 	for _, e := range events {
 		if err := product.Apply(e); err != nil {

@@ -28,15 +28,12 @@ func (f *Fork) EventStore() store.EventStore {
 	return f.fEventStore
 }
 
+// EventCount returns the number of events written to this fork (not inherited ones).
 func (f *Fork) EventCount() int {
-	// A bit slow but okay for small Phase 2 forks
-	evts, _ := f.fEventStore.LoadAll()
-	// Actually we want fork-specific events (overlay size)
-	// Let's cast it
-	if _, ok := f.fEventStore.(*store.ForkEventStore); ok {
-		// Event count logic
+	if fs, ok := f.fEventStore.(*store.ForkEventStore); ok {
+		return fs.OverlayCount()
 	}
-	return len(evts)
+	return 0
 }
 
 type ForkRegistry struct {
@@ -75,7 +72,7 @@ func (r *ForkRegistry) Create(name string, forkedFrom time.Time, description str
 	fES := store.NewForkEventStore(r.main, forkedFrom)
 	fProj := &aggregate.Projector{
 		Events:    fES,
-		Snapshots: r.snaps, // Using main snapshots for base reconstruction
+		Snapshots: store.ClampedSnapshotStore{Inner: r.snaps, Until: forkedFrom},
 	}
 
 	fork := &Fork{

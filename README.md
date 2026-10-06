@@ -185,7 +185,7 @@ events:<aggregateID>:<version_10_digits>   →  JSON Event
 snapshots:<aggregateID>:<unix_nano_20_digits>  →  JSON Snapshot
 ```
 
-Zero-padding ensures version `10` never sorts before version `2`. This lets `LoadBefore` use a single forward range scan — no filtering pass needed.
+Zero-padding ensures version `10` never sorts before version `2`. `LoadAfter` seeks straight to the first version after a snapshot and stops at the first event past the requested time. Appends must not go back in time within an aggregate (`ErrOutOfOrder`), which is what makes stopping early correct.
 
 ### Snapshot compaction
 
@@ -294,7 +294,7 @@ go test -bench=. -benchmem ./aggregate/...
 
 **Snapshot compaction.** A periodic serialization of aggregate state that acts as a checkpoint, bounding the number of events that must be replayed for any read. Same concept as Postgres WAL checkpoints and Kafka log compaction.
 
-**Vector clock.** Events are ordered by `OccurredAt` timestamp and per-aggregate `Version`. When fork events are merged with main events, `mergeEventSlices` uses both fields to produce a deterministic total order.
+**Event ordering.** Events are ordered by `OccurredAt` timestamp and per-aggregate `Version`. Fork overlay versions continue from the main timeline's version at the fork point, and forks only see main-timeline snapshots taken at or before that point.
 
 ---
 

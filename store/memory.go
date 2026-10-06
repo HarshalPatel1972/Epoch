@@ -41,6 +41,10 @@ func (s *MemoryEventStore) Append(e Event) (Event, error) {
 		e.OccurredAt = time.Now()
 	}
 
+	if prev := s.events[e.AggregateID]; len(prev) > 0 && e.OccurredAt.Before(prev[len(prev)-1].OccurredAt) {
+		return Event{}, ErrOutOfOrder
+	}
+
 	s.seq[e.AggregateID]++
 	e.Version = s.seq[e.AggregateID]
 
@@ -70,21 +74,36 @@ func (s *MemoryEventStore) Load(aggregateID string) ([]Event, error) {
 }
 
 func (s *MemoryEventStore) LoadBefore(aggregateID string, cutoff time.Time) ([]Event, error) {
+	return s.LoadAfter(aggregateID, 0, cutoff)
+}
+
+func (s *MemoryEventStore) LoadAfter(aggregateID string, afterVersion int64, cutoff time.Time) ([]Event, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	events, ok := s.events[aggregateID]
-	if !ok {
-		return nil, nil
-	}
+	events := s.events[aggregateID]
+	// Versions are contiguous but may start above 1 (fork overlays), so locate
+	// the first event past afterVersion by search rather than by index.
+	start := sort.Search(len(events), func(i int) bool { return events[i].Version > afterVersion })
 
 	var res []Event
-	for _, e := range events {
-		if e.OccurredAt.Before(cutoff) || e.OccurredAt.Equal(cutoff) {
-			res = append(res, e)
+	for _, e := range events[start:] {
+		if e.OccurredAt.After(cutoff) {
+			break
 		}
+		res = append(res, e)
 	}
 	return res, nil
+}
+
+// ensureSeq makes the next appended version for aggregateID start after base.
+// Fork overlays use it so their versions continue from the main timeline.
+func (s *MemoryEventStore) ensureSeq(aggregateID string, base int64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.seq[aggregateID] < base {
+		s.seq[aggregateID] = base
+	}
 }
 
 func (s *MemoryEventStore) LoadAll() ([]Event, error) {
