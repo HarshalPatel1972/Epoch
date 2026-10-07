@@ -2,6 +2,8 @@
 
 **Backtest your business rules against real history.**
 
+**[Try it in your browser →](https://harshalpatel1972.github.io/Epoch/)** The real engine, running on six months of shop history, with no install.
+
 Epoch is a Go library that records every command your application receives, including the ones it rejects, alongside the events it produces. That record lets you:
 
 - **Time travel.** See any entity, or any report, exactly as it was at any moment.
