@@ -150,18 +150,31 @@
         </svg>
       </div>
 
-      <!-- scene: the ripple -->
+      <!-- scene: the ripple (real data: 3 backorders allowed, ergonomic chair) -->
       <div class="scene" data-scene="ripple">
-        <svg viewBox="0 0 600 420">
-          <g class="ripple">
-            <g class="node n1"><circle cx="110" cy="210" r="38"/><text x="110" y="205" text-anchor="middle">20 May</text><text x="110" y="224" text-anchor="middle" class="sub">10 chairs ✓</text></g>
-            <path class="arrow a1" d="M150 210 H250"/>
-            <g class="node n2"><circle cx="300" cy="210" r="38"/><text x="300" y="205" text-anchor="middle">stock</text><text x="300" y="224" text-anchor="middle" class="sub">7 → −3</text></g>
-            <path class="arrow a2" d="M340 210 H440"/>
-            <g class="node n3"><circle cx="490" cy="210" r="38"/><text x="490" y="205" text-anchor="middle">20–24 May</text><text x="490" y="224" text-anchor="middle" class="sub">5 orders ✗</text></g>
-          </g>
-          <text x="300" y="320" text-anchor="middle" class="ripple-caption">One accepted order changes what every later order sees.</text>
-        </svg>
+        <div class="rp">
+          <div class="rp-card rp-1">
+            <div class="rp-meta"><span>20 May · 21:37</span><span class="pill ok">now accepted</span></div>
+            <div class="rp-title">10 ergonomic chairs</div>
+            <div class="rp-sub">Refused in real life. With 3 backorders allowed, it goes through.</div>
+            <div class="rp-money pos">+$4,491.00</div>
+          </div>
+          <div class="rp-arrow" aria-hidden="true"></div>
+          <div class="rp-card rp-2">
+            <div class="rp-meta"><span>Chair stock</span></div>
+            <div class="rp-stock"><span class="rp-from">7</span><span class="rp-to">→ <b class="rp-count" data-from="7" data-to="-3">7</b></span></div>
+            <div class="rp-gauge" aria-hidden="true"><i class="rp-zero"></i><i class="rp-fill"></i></div>
+          </div>
+          <div class="rp-arrow" aria-hidden="true"></div>
+          <div class="rp-card rp-3">
+            <div class="rp-meta"><span><span class="long">Orders that really went through</span><span class="short">Really fulfilled</span></span><span class="pill no">now refused</span></div>
+            <div class="rp-chips">
+              <span>20 May<b>1</b></span><span>21 May<b>1</b></span><span>22 May<b>2</b></span><span>24 May<b>1</b></span><span>8 Jun<b>5</b></span>
+            </div>
+            <div class="rp-money neg">−$4,740.50</div>
+          </div>
+          <div class="rp-net">Net for chairs: <b>−$249.50</b></div>
+        </div>
       </div>
 
       <!-- scene: the answer -->
@@ -209,7 +222,7 @@
     <article class="step" data-scene="ripple">
       <p class="kicker">Chapter 7</p>
       <h2>Decisions ripple forward.</h2>
-      <p>Try allowing up to three backorders. A 10-chair order on 20 May, refused in real life, now goes through, and the next five chair orders that really were fulfilled get refused instead. A spreadsheet can't follow that chain. A replay follows it every time, because each decision sees exactly the world the earlier ones left behind.</p>
+      <p>Try allowing up to three backorders. A 10-chair order on 20 May, refused in real life, now goes through. Stock drops below zero, and five chair orders that really were fulfilled, the last one weeks later on 8 June, get refused instead. The big sale <strong>loses</strong> money overall.</p><p>A spreadsheet can't follow that chain. A replay follows it every time, because each decision sees exactly the world the earlier ones left behind.</p>
     </article>
     <article class="step" data-scene="answer">
       <p class="kicker">Chapter 8</p>

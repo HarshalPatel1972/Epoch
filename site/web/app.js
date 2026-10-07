@@ -166,6 +166,18 @@ $$(".section-head, .limit, .uc, .start-steps li, .tt, .code-card, .table-wrap, .
     steps.forEach(s => s.classList.toggle("on", s.dataset.scene === name));
     const scene = scenes[name];
     $$(".count", scene).forEach(countUp);
+    $$(".rp-count", scene).forEach(el => {
+      const from = +el.dataset.from, to = +el.dataset.to;
+      const fmt = v => (v < 0 ? "−" : "") + Math.abs(v);
+      clearInterval(el._t);
+      clearTimeout(el._d);
+      if (reducedMotion) { el.textContent = fmt(to); return; }
+      el.textContent = fmt(from);
+      let v = from;
+      el._d = setTimeout(() => {
+        el._t = setInterval(() => { v--; el.textContent = fmt(v); if (v <= to) clearInterval(el._t); }, 90);
+      }, 1100);
+    });
     if (name === "flow") $$("circle", flow).forEach(c => (c.style.opacity = 1));
     if (name === "forget") {
       $$("circle[data-falls]", forget).forEach((c, i) => {

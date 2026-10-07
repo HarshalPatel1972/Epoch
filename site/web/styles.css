@@ -178,21 +178,60 @@ section { padding: 120px 24px; max-width: var(--max); margin: 0 auto; position: 
 .pill.no { background: rgba(255,93,108,.12); color: var(--red); }
 .pill.re { background: rgba(255,181,71,.13); color: var(--amber); }
 
-.ripple .node circle { fill: var(--bg-3); stroke: var(--line-2); stroke-width: 2; transition: stroke .4s, fill .4s; }
-.ripple .node text { font: 600 14px var(--sans); fill: var(--text); }
-.ripple .node text.sub { font: 400 12px var(--mono); fill: var(--muted); }
-.ripple .arrow { stroke: var(--amber); stroke-width: 2; stroke-dasharray: 100; stroke-dashoffset: 100; marker-end: none; }
-.scene.on .ripple .a1 { animation: draw .6s .5s forwards; }
-.scene.on .ripple .a2 { animation: draw .6s 1.4s forwards; }
-.scene.on .ripple .n1 circle { animation: lit .4s .1s forwards; }
-.scene.on .ripple .n2 circle { animation: lit .4s 1s forwards; }
-.scene.on .ripple .n3 circle { animation: litred .4s 1.9s forwards; }
-@keyframes lit { to { stroke: var(--amber); fill: rgba(255,181,71,.1); } }
-@keyframes litred { to { stroke: var(--red); fill: rgba(255,93,108,.12); } }
-.ripple-caption { font: 400 22px var(--serif); fill: var(--muted); }
+/* ripple scene: a vertical chain of cards, sized by their content */
+.rp { width: min(440px, 100%); display: flex; flex-direction: column; align-items: stretch; }
+.rp-card { background: var(--bg-2); border: 1px solid var(--line-2); border-radius: 14px; padding: 14px 16px; opacity: 0; transform: translateY(10px); }
+.scene.on .rp-1 { animation: slidein .5s .1s forwards; }
+.scene.on .rp-2 { animation: slidein .5s .9s forwards; }
+.scene.on .rp-3 { animation: slidein .5s 1.9s forwards; }
+.rp-meta { display: flex; justify-content: space-between; align-items: center; gap: 10px; font: 12px var(--mono); color: var(--muted); }
+.rp-title { font: 600 17px var(--sans); margin-top: 8px; }
+.rp-sub { color: var(--muted); font-size: 13.5px; margin-top: 2px; }
+.rp-money { font: 500 14px var(--mono); margin-top: 8px; }
+.rp-money.pos { color: var(--green); } .rp-money.neg { color: var(--red); }
+.rp-1 { border-color: rgba(61,220,151,.45); }
+.rp-3 { border-color: rgba(255,93,108,.5); }
+.rp-arrow { width: 2px; height: 22px; margin: 4px auto 10px; background: var(--amber); position: relative; transform: scaleY(0); transform-origin: top; }
+.rp-arrow::after { content: ""; position: absolute; left: 50%; bottom: -7px; transform: translateX(-50%); border: 6px solid transparent; border-top: 7px solid var(--amber); border-bottom: 0; }
+.scene.on .rp-arrow:nth-of-type(2) { animation: grow .4s .6s forwards; }
+.scene.on .rp-arrow:nth-of-type(4) { animation: grow .4s 1.5s forwards; }
+@keyframes grow { to { transform: scaleY(1); } }
+.rp-stock { display: flex; align-items: baseline; gap: 10px; margin-top: 4px; font: 400 40px/1.1 var(--serif); }
+.rp-from { color: var(--muted); }
+.rp-to b { font-weight: 400; color: var(--red); }
+.rp-gauge { position: relative; height: 6px; border-radius: 4px; background: var(--line); margin: 8px 0 4px; }
+.rp-zero { position: absolute; left: 30%; top: -4px; bottom: -4px; width: 2px; background: var(--muted); }
+/* 0..10 units maps to 30%..100% of the gauge; below zero runs left of the marker. */
+.rp-fill { position: absolute; top: 0; bottom: 0; left: 30%; width: 49%; border-radius: 4px; background: var(--violet); transition: left 1s 1.1s, width 1s 1.1s, background .3s 1.6s; }
+.scene.on .rp-fill { left: 9%; width: 21%; background: var(--red); }
+.rp-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.rp-chips span { font: 12px var(--mono); color: var(--red); background: rgba(255,93,108,.1); border: 1px solid rgba(255,93,108,.35); border-radius: 8px; padding: 4px 8px; display: inline-flex; gap: 6px; opacity: 0; transform: scale(.85); }
+.rp-chips b { color: var(--text); font-weight: 500; }
+.rp-chips b::after { content: " ✗"; color: var(--red); }
+.scene.on .rp-chips span { animation: pop .3s forwards; }
+.scene.on .rp-chips span:nth-child(1) { animation-delay: 2.3s; }
+.scene.on .rp-chips span:nth-child(2) { animation-delay: 2.45s; }
+.scene.on .rp-chips span:nth-child(3) { animation-delay: 2.6s; }
+.scene.on .rp-chips span:nth-child(4) { animation-delay: 2.75s; }
+.scene.on .rp-chips span:nth-child(5) { animation-delay: 2.9s; }
+@keyframes pop { to { opacity: 1; transform: none; } }
+.rp-meta .short { display: none; }
+.rp-net { text-align: center; margin-top: 14px; color: var(--muted); font: 400 22px var(--serif); opacity: 0; }
+.rp-net b { color: var(--red); font-weight: 400; }
+.scene.on .rp-net { animation: fadein .6s 3.3s forwards; }
 @media (max-width: 900px) {
-  .ripple .node text { font-size: 19px; } .ripple .node text.sub { font-size: 16px; }
-  .ripple-caption { font-size: 30px; }
+  .rp-card { padding: 7px 12px; border-radius: 10px; }
+  .rp-title { font-size: 14px; margin-top: 2px; }
+  .rp-sub { display: none; }
+  .rp-stock { font-size: 24px; }
+  .rp-money { font-size: 12px; margin-top: 2px; }
+  .rp-arrow { height: 8px; margin: 2px auto 8px; }
+  .rp-chips { gap: 4px; margin-top: 5px; }
+  .rp-chips span { padding: 2px 6px; font-size: 11px; }
+  .rp-net { font-size: 16px; margin-top: 4px; }
+  .rp-gauge { display: none; }
+  .rp-meta .long { display: none; } .rp-meta .short { display: inline; }
+  .scene[data-scene=ripple] { padding: 10px 14px; }
 }
 
 .answer { text-align: center; }
@@ -392,6 +431,8 @@ input[type=range]:disabled { opacity: .4; cursor: default; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; transition-duration: .01ms !important; }
   html { scroll-behavior: auto; }
-  .hero-branch, .tl-branch, .ripple .arrow { stroke-dashoffset: 0; }
+  .hero-branch, .tl-branch { stroke-dashoffset: 0; }
+  .rp-card, .rp-chips span, .rp-net { opacity: 1; transform: none; }
+  .rp-arrow { transform: none; }
   .reveal { opacity: 1; transform: none; }
 }
