@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Epoch — backtest your business rules against real history</title>
+<meta name="description" content="Epoch is an open-source Go library that records every request your app receives, even the rejected ones, so you can replay real history under new business rules and see exactly what would have changed.">
+<meta property="og:title" content="Epoch — what would have happened?">
+<meta property="og:description" content="Replay real history under new business rules. An open-source Go library, running live in your browser.">
+<meta property="og:image" content="https://harshalpatel1972.github.io/Epoch/og.png">
+<meta property="og:url" content="https://harshalpatel1972.github.io/Epoch/">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#07070c">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%238b7fff' stroke-width='3'/%3E%3Cpath d='M16 8v8l5 4' fill='none' stroke='%23ffb547' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="prefetch" href="epoch.wasm" as="fetch" crossorigin>
+</head>
+<body>
+
+<a class="skip" href="#playground">Skip to the playground</a>
+
+<header class="nav" id="nav">
+  <a class="logo" href="#top" aria-label="Epoch home">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13"/><path d="M16 8v8l5 4"/></svg>
+    Epoch
+  </a>
+  <nav aria-label="Sections">
+    <a href="#story">Story</a>
+    <a href="#playground">Playground</a>
+    <a href="#fit">Is it for you?</a>
+    <a href="#compare">Compare</a>
+    <a href="#start">Get started</a>
+  </nav>
+  <a class="btn ghost small" href="https://github.com/HarshalPatel1972/epoch">
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    GitHub
+  </a>
+</header>
+
+<main id="top">
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="hero-copy">
+    <p class="eyebrow"><span class="dot"></span> Open-source Go library · v2.0.0-beta.1</p>
+    <h1>What would have <em>happened?</em></h1>
+    <p class="lede">Epoch records every request your app receives, <strong>including the ones it turns down</strong>. Change a business rule, replay real history under it, and see exactly which decisions would have come out differently.</p>
+    <div class="cta-row">
+      <a class="btn primary" href="#playground">Try it in your browser <span aria-hidden="true">↓</span></a>
+      <button class="install" id="installHero" type="button" aria-label="Copy install command">
+        <code>go get github.com/HarshalPatel1972/epoch/v2</code>
+        <span class="copy-label">copy</span>
+      </button>
+    </div>
+  </div>
+  <div class="hero-art" aria-hidden="true">
+    <svg id="heroSvg" viewBox="0 0 1200 250" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id="fadeL" x1="0" x2="1"><stop offset="0" stop-color="#8b7fff" stop-opacity="0"/><stop offset=".15" stop-color="#8b7fff"/><stop offset="1" stop-color="#8b7fff"/></linearGradient>
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      </defs>
+      <path class="hero-main" d="M0 70 H1200" />
+      <path class="hero-branch" id="heroBranch" d="M380 70 C 480 70, 500 190, 620 190 H1200" />
+      <text class="hero-label" x="1188" y="52" text-anchor="end">what happened</text>
+      <text class="hero-label amber" x="1188" y="222" text-anchor="end">what would have happened</text>
+      <g id="heroDots"></g>
+    </svg>
+  </div>
+  <div class="hero-proof">
+    <div><b>0</b> dependencies in the core</div>
+    <div><b>285k</b> commands replayed per second, in memory</div>
+    <div><b>100%</b> of the playground runs in your browser</div>
+  </div>
+</section>
+
+<!-- ============ STORY ============ -->
+<section class="story" id="story" aria-label="The story">
+  <div class="stage-wrap">
+    <div class="stage" id="stage" aria-hidden="true">
+
+      <!-- scene: orders flowing -->
+      <div class="scene" data-scene="flow">
+        <svg viewBox="0 0 600 420">
+          <path class="tl" d="M30 210 H570"/>
+          <g class="flow-dots"></g>
+          <text x="30" y="250" class="tl-label">1 Jan</text>
+          <text x="570" y="250" class="tl-label" text-anchor="end">30 Jun</text>
+        </svg>
+        <div class="scene-stat"><span class="count" data-to="2068">0</span> orders in six months</div>
+      </div>
+
+      <!-- scene: the question -->
+      <div class="scene" data-scene="question">
+        <div class="bubble">
+          <div class="bubble-who">Mara's business partner</div>
+          “What if we'd given customers who've been with us a year <em>15% off</em> since January? Would it have paid for itself?”
+        </div>
+      </div>
+
+      <!-- scene: the database forgets -->
+      <div class="scene" data-scene="forget">
+        <svg viewBox="0 0 600 420">
+          <path class="tl" d="M30 150 H570"/>
+          <g class="forget-dots"></g>
+        </svg>
+        <div class="db-card">
+          <div class="db-title">products</div>
+          <div class="db-row"><span>27" 4K monitor</span><span>stock <b>35</b></span></div>
+          <div class="db-row"><span>Ergonomic chair</span><span>stock <b>5</b></span></div>
+          <div class="db-row dim"><span>48 turned-away orders</span><span>—</span></div>
+        </div>
+      </div>
+
+      <!-- scene: the guess -->
+      <div class="scene" data-scene="guess">
+        <div class="sheet">
+          <div class="sheet-head"><span>A</span><span>B</span><span>C</span></div>
+          <div class="sheet-row"><span>revenue</span><span>$544,745</span><span></span></div>
+          <div class="sheet-row"><span>× loyal share?</span><span>~60%?</span><span></span></div>
+          <div class="sheet-row"><span>× 15%</span><span class="scribble">≈ $49k??</span><span></span></div>
+          <div class="sheet-row"><span>more orders?</span><span class="scribble">+ maybe</span><span></span></div>
+          <div class="sheet-row"><span>stock-outs?</span><span class="scribble">¯\_(ツ)_/¯</span><span></span></div>
+        </div>
+      </div>
+
+      <!-- scene: the log -->
+      <div class="scene" data-scene="log">
+        <div class="log">
+          <div class="log-row"><span class="t">09:33</span><span class="c">PlaceOrder</span><span>keyboard × 2</span><span class="pill ok">accepted</span></div>
+          <div class="log-row"><span class="t">11:02</span><span class="c">PlaceOrder</span><span>mouse × 1</span><span class="pill ok">accepted</span></div>
+          <div class="log-row"><span class="t">14:47</span><span class="c">PlaceOrder</span><span>monitor × 8</span><span class="pill no">out of stock</span></div>
+          <div class="log-row"><span class="t">16:20</span><span class="c">Restock</span><span>monitor + 14</span><span class="pill ok">accepted</span></div>
+          <div class="log-row"><span class="t">17:05</span><span class="c">PlaceOrder</span><span>webcam × 1</span><span class="pill ok">accepted</span></div>
+          <div class="log-row"><span class="t">19:22</span><span class="c">PlaceOrder</span><span>chair × 10</span><span class="pill no">out of stock</span></div>
+        </div>
+      </div>
+
+      <!-- scene: the replay -->
+      <div class="scene" data-scene="replay">
+        <svg viewBox="0 0 600 420">
+          <path class="tl" d="M30 140 H570"/>
+          <path class="tl-branch" d="M120 140 C 170 140, 180 280, 250 280 H570"/>
+          <g class="replay-dots"></g>
+          <text x="570" y="122" class="tl-label" text-anchor="end">main</text>
+          <text x="570" y="312" class="tl-label amber" text-anchor="end">loyalty-15</text>
+        </svg>
+      </div>
+
+      <!-- scene: the ripple -->
+      <div class="scene" data-scene="ripple">
+        <svg viewBox="0 0 600 420">
+          <g class="ripple">
+            <g class="node n1"><circle cx="110" cy="210" r="38"/><text x="110" y="205" text-anchor="middle">20 May</text><text x="110" y="224" text-anchor="middle" class="sub">10 chairs ✓</text></g>
+            <path class="arrow a1" d="M150 210 H250"/>
+            <g class="node n2"><circle cx="300" cy="210" r="38"/><text x="300" y="205" text-anchor="middle">stock</text><text x="300" y="224" text-anchor="middle" class="sub">7 → −3</text></g>
+            <path class="arrow a2" d="M340 210 H440"/>
+            <g class="node n3"><circle cx="490" cy="210" r="38"/><text x="490" y="205" text-anchor="middle">20–24 May</text><text x="490" y="224" text-anchor="middle" class="sub">5 orders ✗</text></g>
+          </g>
+          <text x="300" y="320" text-anchor="middle" class="ripple-caption">One accepted order changes what every later order sees.</text>
+        </svg>
+      </div>
+
+      <!-- scene: the answer -->
+      <div class="scene" data-scene="answer">
+        <div class="answer">
+          <div class="answer-k">15% loyalty discount, since 1 January</div>
+          <div class="answer-v">−$<span class="count" data-to="43416">0</span></div>
+          <div class="answer-sub">1,477 orders re-priced · 2,280 commands replayed · 65 ms</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="steps">
+    <article class="step" data-scene="flow">
+      <p class="kicker">Chapter 1</p>
+      <h2>Meet Mara.</h2>
+      <p>Mara runs a small online shop: keyboards, monitors, desk chairs. In six months it took just over two thousand orders. Her app decides each one. Is there stock? What's the price? Is there a discount?</p>
+    </article>
+    <article class="step" data-scene="question">
+      <p class="kicker">Chapter 2</p>
+      <h2>One Monday, a question.</h2>
+      <p>Her partner wants a loyalty discount. It sounds sensible. But would it have paid for itself, or just given money away?</p>
+    </article>
+    <article class="step" data-scene="forget">
+      <p class="kicker">Chapter 3</p>
+      <h2>Her database can't say.</h2>
+      <p>It stores <em>what is</em>: today's stock, the orders that went through. The 48 orders turned away for lack of stock left no trace at all. Every <code>UPDATE</code> wrote over the state the next decision depended on.</p>
+    </article>
+    <article class="step" data-scene="guess">
+      <p class="kicker">Chapter 4</p>
+      <h2>So the answer becomes a guess.</h2>
+      <p>A spreadsheet. Revenue times some share, times fifteen percent. Nobody knows how many customers would have qualified, or how a cheaper price would have drained stock that later orders needed.</p>
+    </article>
+    <article class="step" data-scene="log">
+      <p class="kicker">Chapter 5</p>
+      <h2>Epoch keeps the question.</h2>
+      <p>With Epoch, Mara's app records every command it receives, <strong>accepted or rejected</strong>, along with the decision it made. Nothing is overwritten. It's a log of everything she was ever asked.</p>
+    </article>
+    <article class="step" data-scene="replay">
+      <p class="kicker">Chapter 6</p>
+      <h2>Then it replays the past under the new rule.</h2>
+      <p>Epoch forks history at 1 January, a branch next to the real timeline, and sends every recorded order back through the new pricing logic. In order, at the original time, with the stock that existed then.</p>
+    </article>
+    <article class="step" data-scene="ripple">
+      <p class="kicker">Chapter 7</p>
+      <h2>Decisions ripple forward.</h2>
+      <p>Try allowing up to three backorders. A 10-chair order on 20 May, refused in real life, now goes through, and the next five chair orders that really were fulfilled get refused instead. A spreadsheet can't follow that chain. A replay follows it every time, because each decision sees exactly the world the earlier ones left behind.</p>
+    </article>
+    <article class="step" data-scene="answer">
+      <p class="kicker">Chapter 8</p>
+      <h2>Not a guess. An answer.</h2>
+      <p>The discount would have cost <strong>$43,416</strong>, spread across 1,477 orders, each one listed. No rejected order would have been saved. Mara's real data was never touched.</p>
+      <p><a class="btn primary" href="#playground">Now change the rules yourself <span aria-hidden="true">↓</span></a></p>
+    </article>
+  </div>
+</section>
+
+<!-- ============ PLAYGROUND ============ -->
+<section class="playground" id="playground">
+  <div class="section-head">
+    <p class="eyebrow">Playground</p>
+    <h2>Now it's your shop.</h2>
+    <p class="lede">This is the real Epoch engine, compiled to WebAssembly and running in this tab, on six months of generated history: 2,280 recorded commands. Change the rules and the past is replayed under them. Nothing leaves your browser.</p>
+  </div>
+
+  <noscript><p class="lede">The playground runs the Epoch engine in your browser and needs JavaScript. You can also run it locally: <code>go run ./examples/shop -serve :8080</code>.</p></noscript>
+  <div class="pg" id="pg">
+    <form class="rules" id="rules" aria-label="Business rules">
+      <div class="rules-head">
+        <span class="file">pricing_rules.go</span>
+        <span class="status" id="engineStatus"><span class="spinner"></span> loading engine…</span>
+      </div>
+
+      <div class="presets" role="group" aria-label="Presets">
+        <button type="button" data-preset="actual" class="chip active">What actually ran</button>
+        <button type="button" data-preset="loyalty">Loyalty 15%</button>
+        <button type="button" data-preset="backorders">Allow backorders</button>
+        <button type="button" data-preset="nodiscount">No discounts</button>
+        <button type="button" data-preset="generous">Big spender</button>
+      </div>
+
+      <fieldset>
+        <legend>Loyalty discount</legend>
+        <label class="rule"><span>discount</span><input type="range" name="LoyaltyDiscount" min="0" max="30" step="1" value="0"><output data-for="LoyaltyDiscount" data-unit="%">0%</output></label>
+        <label class="rule"><span>after</span><input type="range" name="LoyaltyMonths" min="1" max="36" step="1" value="12"><output data-for="LoyaltyMonths" data-unit=" months">12 months</output></label>
+      </fieldset>
+      <fieldset>
+        <legend>Bulk discount</legend>
+        <label class="rule"><span>discount</span><input type="range" name="BulkDiscount" min="0" max="30" step="1" value="10"><output data-for="BulkDiscount" data-unit="%">10%</output></label>
+        <label class="rule"><span>from</span><input type="range" name="BulkQty" min="2" max="10" step="1" value="5"><output data-for="BulkQty" data-unit=" units">5 units</output></label>
+      </fieldset>
+      <fieldset>
+        <legend>When stock runs out</legend>
+        <label class="rule"><span>backorders</span><input type="range" name="Backorder" min="0" max="25" step="1" value="0"><output data-for="Backorder" data-unit=" units">0 units</output></label>
+      </fieldset>
+      <fieldset>
+        <legend>New rules apply from</legend>
+        <div class="months" role="radiogroup" aria-label="Start month" id="months"></div>
+      </fieldset>
+
+      <button class="btn primary wide" type="submit" id="replayBtn" disabled>Replay history</button>
+      <p class="fine">Rules re-run on every change. <kbd>R</kbd> replays.</p>
+    </form>
+
+    <div class="results" aria-live="polite">
+      <div class="kpis" id="kpis">
+        <div class="kpi big"><div class="k">Revenue</div><div class="v" data-k="revenue">—</div><div class="s" data-s="revenue">replay the rules to compare</div></div>
+        <div class="kpi"><div class="k">Orders</div><div class="v" data-k="orders">—</div><div class="s" data-s="orders"></div></div>
+        <div class="kpi"><div class="k">Turned away</div><div class="v" data-k="turned_away">—</div><div class="s" data-s="turned_away"></div></div>
+        <div class="kpi"><div class="k">Discounts given</div><div class="v" data-k="discounts">—</div><div class="s" data-s="discounts"></div></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-head">
+          <div class="legend"><span class="sw violet"></span>what happened <span class="sw amber"></span>under your rules</div>
+          <div class="chart-title">Cumulative revenue</div>
+        </div>
+        <svg id="chart" viewBox="0 0 800 280" preserveAspectRatio="none" role="img" aria-label="Cumulative revenue, actual versus replayed"></svg>
+        <div class="chart-tip" id="chartTip" hidden></div>
+        <div class="axis" id="axis"></div>
+        <div class="diff-head"><span>Difference, day by day</span><span id="diffNow"></span></div>
+        <svg id="diffChart" viewBox="0 0 800 70" preserveAspectRatio="none" aria-hidden="true"></svg>
+      </div>
+
+      <div class="speed" id="speed">Waiting for the engine…</div>
+
+      <div class="changes-card">
+        <div class="changes-head">
+          <h3>Every decision that changed</h3>
+          <div class="tabs" role="tablist" id="changeTabs">
+            <button role="tab" aria-selected="true" data-kind="all">All <span></span></button>
+            <button role="tab" aria-selected="false" data-kind="now_accepted">Now accepted <span></span></button>
+            <button role="tab" aria-selected="false" data-kind="now_rejected">Now refused <span></span></button>
+            <button role="tab" aria-selected="false" data-kind="events_changed">Re-priced <span></span></button>
+          </div>
+        </div>
+        <ol class="changes" id="changes"><li class="empty">Change a rule to see which orders would have gone differently.</li></ol>
+        <button class="btn ghost small" type="button" id="moreChanges" hidden>Show more</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- time travel -->
+  <div class="tt" id="timetravel">
+    <div class="tt-copy">
+      <p class="eyebrow">Time travel</p>
+      <h3>Every entity, at any moment.</h3>
+      <p>Drag through the six months. Each card is <code>Products.Load(ctx, store, id, epoch.AsOf(t))</code>, computed live from the log.</p>
+    </div>
+    <div class="tt-body">
+      <div class="tt-spark" id="ttSpark" aria-hidden="true"></div>
+      <input type="range" id="ttSlider" min="0" max="180" value="59" aria-label="Point in time" disabled>
+      <div class="tt-date" id="ttDate">1 March 2026</div>
+      <div class="tt-grid" id="ttGrid"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CODE ============ -->
+<section class="code-section" id="code">
+  <div class="section-head">
+    <p class="eyebrow">The idea, in Go</p>
+    <h2>Two pure functions. Everything else follows.</h2>
+    <p class="lede">You write your business logic as <code>Decide</code> (command → events, or a refusal) and <code>Evolve</code> (state + event → state). Epoch records, versions, branches and replays.</p>
+  </div>
+  <div class="code-card">
+    <div class="code-tabs" role="tablist" id="codeTabs">
+      <button role="tab" aria-selected="true" data-code="model">1 · Model</button>
+      <button role="tab" aria-selected="false" data-code="handle">2 · Handle</button>
+      <button role="tab" aria-selected="false" data-code="travel">3 · Time travel</button>
+      <button role="tab" aria-selected="false" data-code="replay">4 · Replay</button>
+    </div>
+    <pre class="code" id="codeBlock" tabindex="0"></pre>
+  </div>
+</section>
+
+<!-- ============ FIT ============ -->
+<section class="fit" id="fit">
+  <div class="section-head">
+    <p class="eyebrow">Is Epoch for you?</p>
+    <h2>Pick what you're trying to do.</h2>
+    <p class="lede">Epoch does one thing very well. If that isn't your problem, something else will serve you better. Here's an honest guide.</p>
+  </div>
+  <div class="goals" id="goals" role="radiogroup" aria-label="Your goal"></div>
+  <div class="verdict" id="verdict" aria-live="polite"></div>
+
+  <div class="usecases">
+    <h3>Where teams use replay</h3>
+    <div class="uc-grid" id="useCases"></div>
+  </div>
+</section>
+
+<!-- ============ COMPARE ============ -->
+<section class="compare" id="compare">
+  <div class="section-head">
+    <p class="eyebrow">How it compares</p>
+    <h2>Good company. A different question.</h2>
+    <p class="lede">Many tools can show you the past. Epoch is the one built to <em>re-decide</em> it. It's a library that runs alongside your database, not a replacement for one.</p>
+  </div>
+  <div class="table-wrap">
+    <table class="cmp" id="cmpTable"></table>
+  </div>
+  <p class="fine center">✓ built in · ◐ partly, or with extra work · — not a goal of the tool. Based on each project's documented features as of 2026; corrections welcome on GitHub.</p>
+</section>
+
+<!-- ============ LIMITS ============ -->
+<section class="limits" id="limits">
+  <div class="section-head">
+    <p class="eyebrow">Fine print, up front</p>
+    <h2>What Epoch won't do.</h2>
+  </div>
+  <div class="limit-grid">
+    <div class="limit"><h3>Predict behaviour</h3><p>A replay re-runs the requests you actually received. It can't know that a 15% discount would have brought in customers who never showed up.</p></div>
+    <div class="limit"><h3>Fix non-determinism</h3><p>Decisions must depend only on state, the command and the time. Put prices, scores and exchange rates <em>in the command</em> so they're recorded.</p></div>
+    <div class="limit"><h3>Replace your database</h3><p>Epoch stores its log in a store you choose: in-memory, SQLite today, or your own via a 37-test conformance suite.</p></div>
+    <div class="limit"><h3>Scale out on its own</h3><p>The SQLite store fits one application node. A Postgres store is next on the roadmap. Epoch is beta: pin your version.</p></div>
+  </div>
+</section>
+
+<!-- ============ START ============ -->
+<section class="start" id="start">
+  <div class="section-head">
+    <p class="eyebrow">Get started</p>
+    <h2>Ask your own “what if”.</h2>
+  </div>
+  <ol class="start-steps">
+    <li><span class="n">1</span><div><h3>Install</h3><button class="install" type="button" data-copy="go get github.com/HarshalPatel1972/epoch/v2"><code>go get github.com/HarshalPatel1972/epoch/v2</code><span class="copy-label">copy</span></button></div></li>
+    <li><span class="n">2</span><div><h3>Run the tour</h3><button class="install" type="button" data-copy="git clone https://github.com/HarshalPatel1972/epoch && cd epoch/v2 && go run ./examples/shop -serve :8080"><code>go run ./examples/shop -serve :8080</code><span class="copy-label">copy</span></button><p>Six months of history in your terminal, then Epoch Studio in your browser.</p></div></li>
+    <li><span class="n">3</span><div><h3>Read the docs</h3><p>Runnable examples for every feature on <a href="https://pkg.go.dev/github.com/HarshalPatel1972/epoch/v2">pkg.go.dev</a>, and the full guide in the <a href="https://github.com/HarshalPatel1972/epoch#readme">README</a>.</p></div></li>
+  </ol>
+  <div class="cta-row center">
+    <a class="btn primary" href="https://github.com/HarshalPatel1972/epoch">Star on GitHub</a>
+    <a class="btn ghost" href="https://pkg.go.dev/github.com/HarshalPatel1972/epoch/v2">Documentation</a>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <div>
+    <a class="logo" href="#top"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13"/><path d="M16 8v8l5 4"/></svg>Epoch</a>
+    <p>Backtest your business rules against real history.</p>
+  </div>
+  <div class="foot-links">
+    <a href="https://github.com/HarshalPatel1972/epoch">GitHub</a>
+    <a href="https://pkg.go.dev/github.com/HarshalPatel1972/epoch/v2">Docs</a>
+    <a href="https://github.com/HarshalPatel1972/epoch/blob/main/CHANGELOG.md">Changelog</a>
+    <a href="https://github.com/HarshalPatel1972/epoch/blob/main/LICENSE">MIT License</a>
+  </div>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="app.js" defer></script>
+</body>
+</html>

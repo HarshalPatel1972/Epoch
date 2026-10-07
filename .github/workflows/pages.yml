@@ -1,0 +1,47 @@
+name: Website
+
+on:
+  push:
+    branches: [main]
+    paths: ["site/**", "v2/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+          cache-dependency-path: site/go.mod
+      - name: Build the playground engine (Epoch compiled to WebAssembly)
+        working-directory: site
+        run: |
+          GOOS=js GOARCH=wasm go build -trimpath -ldflags="-s -w" -o web/epoch.wasm ./playground
+          # wasm_exec.js must come from the same Go release that built epoch.wasm.
+          cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" web/
+          ls -la web
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: site/web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

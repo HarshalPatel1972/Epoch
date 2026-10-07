@@ -6,3 +6,5 @@
 *.db-shm
 *.db-wal
 /bin/
+site/web/epoch.wasm
+site/web/wasm_exec.js
