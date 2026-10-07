@@ -11,8 +11,8 @@
 <meta property="og:url" content="https://harshalpatel1972.github.io/Epoch/">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#1a1b29">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%238b7fff' stroke-width='3'/%3E%3Cpath d='M16 8v8l5 4' fill='none' stroke='%23ffb547' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#1b201e">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%23d6cdb9' stroke-width='3'/%3E%3Cpath d='M16 8v8l5 4' fill='none' stroke='%23df8f5f' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -31,6 +31,7 @@
   <nav aria-label="Sections">
     <a href="#story">Story</a>
     <a href="#playground">Playground</a>
+    <a href="#studio">Studio</a>
     <a href="#fit">Is it for you?</a>
     <a href="#compare">Compare</a>
     <a href="#start">Get started</a>
@@ -45,9 +46,10 @@
 
 <!-- ============ HERO ============ -->
 <section class="hero">
+  <div class="hero-top">
   <div class="hero-copy">
     <p class="eyebrow"><span class="dot"></span> Open-source Go library · v2.0.0-beta.1</p>
-    <h1>What would have <em>happened?</em></h1>
+    <h1><span class="l1">What would have</span> <em>happened?</em></h1>
     <p class="lede">Epoch records every request your app receives, <strong>including the ones it turns down</strong>. Change a business rule, replay real history under it, and see exactly which decisions would have come out differently.</p>
     <div class="cta-row">
       <a class="btn primary" href="#playground">Try it in your browser <span aria-hidden="true">↓</span></a>
@@ -57,16 +59,22 @@
       </button>
     </div>
   </div>
+  <figure class="term" aria-label="Terminal running the Epoch tour">
+    <div class="term-bar"><span class="term-dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="term-title">epoch/v2 — zsh</span></div>
+    <pre class="term-body" id="term"></pre>
+    <figcaption>Trimmed to fit, from the real output of <code>go run ./examples/shop</code>. Every number is as printed.</figcaption>
+  </figure>
+  </div>
   <div class="hero-art" aria-hidden="true">
     <svg id="heroSvg" viewBox="0 0 1200 250" preserveAspectRatio="xMidYMid meet">
       <defs>
-        <linearGradient id="fadeL" x1="0" x2="1"><stop offset="0" stop-color="#8b7fff" stop-opacity="0"/><stop offset=".15" stop-color="#8b7fff"/><stop offset="1" stop-color="#8b7fff"/></linearGradient>
+        <linearGradient id="fadeL" x1="0" x2="1"><stop offset="0" stop-color="#d6cdb9" stop-opacity="0"/><stop offset=".15" stop-color="#d6cdb9" stop-opacity=".7"/><stop offset="1" stop-color="#d6cdb9" stop-opacity=".7"/></linearGradient>
         <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
       </defs>
       <path class="hero-main" d="M0 70 H1200" />
       <path class="hero-branch" id="heroBranch" d="M380 70 C 480 70, 500 190, 620 190 H1200" />
       <text class="hero-label" x="1188" y="52" text-anchor="end">what happened</text>
-      <text class="hero-label amber" x="1188" y="222" text-anchor="end">what would have happened</text>
+      <text class="hero-label alt" x="1188" y="222" text-anchor="end">what would have happened</text>
       <g id="heroDots"></g>
     </svg>
   </div>
@@ -146,7 +154,7 @@
           <path class="tl-branch" d="M120 140 C 170 140, 180 280, 250 280 H570"/>
           <g class="replay-dots"></g>
           <text x="570" y="122" class="tl-label" text-anchor="end">main</text>
-          <text x="570" y="312" class="tl-label amber" text-anchor="end">loyalty-15</text>
+          <text x="570" y="312" class="tl-label alt" text-anchor="end">loyalty-15</text>
         </svg>
       </div>
 
@@ -290,7 +298,7 @@
 
       <div class="chart-card">
         <div class="chart-head">
-          <div class="legend"><span class="sw violet"></span>what happened <span class="sw amber"></span>under your rules</div>
+          <div class="legend"><span class="sw past"></span>what happened <span class="sw alt"></span>under your rules</div>
           <div class="chart-title">Cumulative revenue</div>
         </div>
         <svg id="chart" viewBox="0 0 800 280" preserveAspectRatio="none" role="img" aria-label="Cumulative revenue, actual versus replayed"></svg>
@@ -331,6 +339,36 @@
       <div class="tt-date" id="ttDate">1 March 2026</div>
       <div class="tt-grid" id="ttGrid"></div>
     </div>
+  </div>
+</section>
+
+<!-- ============ STUDIO ============ -->
+<section class="studio" id="studio">
+  <div class="section-head">
+    <p class="eyebrow">Epoch Studio</p>
+    <h2>When it's <em>your</em> data.</h2>
+    <p class="lede">Studio ships with Epoch. Mount it in your Go server and your team can scrub through history, fork it, run replays with the rules you register, and compare the outcomes, without writing a query.</p>
+  </div>
+  <div class="studio-grid">
+    <div class="studio-tabs" role="tablist" aria-label="Studio views" id="studioTabs">
+      <button role="tab" aria-selected="true" data-shot="overview"><b>Any moment</b><span>Drag the timeline. Every read model is recomputed as of that instant.</span></button>
+      <button role="tab" aria-selected="false" data-shot="replay"><b>Replay reports</b><span>Every decision a new rule changed, with what happened and what would have.</span></button>
+      <button role="tab" aria-selected="false" data-shot="compare"><b>Branch comparison</b><span>A structural diff of any read model between two timelines.</span></button>
+      <button role="tab" aria-selected="false" data-shot="entity"><b>Entity history</b><span>One entity's full record, accepted and refused, on any branch.</span></button>
+      <pre class="studio-code"><span class="com">// all it takes</span>
+studio := epochhttp.<span class="fn">New</span>(epochhttp.<span class="ty">Config</span>{
+  Store:  store,
+  Models: []epoch.<span class="ty">AnyModel</span>{Products},
+})
+mux.<span class="fn">Handle</span>(<span class="str">"/epoch/"</span>,
+  http.<span class="fn">StripPrefix</span>(<span class="str">"/epoch"</span>, studio))</pre>
+    </div>
+    <figure class="browser">
+      <div class="browser-bar"><span class="term-dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="browser-url" id="studioUrl">localhost:8080/epoch/#branch=main&amp;tab=views</span></div>
+      <div class="browser-view">
+        <a id="studioLink" href="img/studio-overview.png" target="_blank" rel="noopener" title="Open full size"><img id="studioShot" src="img/studio-overview.png" alt="Epoch Studio showing the sales read model with an activity chart and branch list" width="2040" height="1230" loading="lazy" decoding="async"></a>
+      </div>
+    </figure>
   </div>
 </section>
 

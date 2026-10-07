@@ -52,13 +52,13 @@ const navLinks = $$(".nav nav a");
 const sectionObserver = new IntersectionObserver(entries => {
   for (const e of entries) if (e.isIntersecting) navLinks.forEach(a => a.classList.toggle("active", a.getAttribute("href") === "#" + e.target.id));
 }, { rootMargin: "-45% 0px -50% 0px" });
-["story", "playground", "fit", "compare", "start"].forEach(id => sectionObserver.observe(document.getElementById(id)));
+["story", "playground", "studio", "fit", "compare", "start"].forEach(id => sectionObserver.observe(document.getElementById(id)));
 
 // reveal on scroll
 const revealObserver = new IntersectionObserver(entries => {
   for (const e of entries) if (e.isIntersecting) { e.target.classList.add("in"); revealObserver.unobserve(e.target); }
 }, { rootMargin: "0px 0px -10% 0px" });
-$$(".section-head, .limit, .uc, .start-steps li, .tt, .code-card, .table-wrap, .goal").forEach(el => { el.classList.add("reveal"); revealObserver.observe(el); });
+$$(".section-head, .limit, .uc, .start-steps li, .tt, .code-card, .table-wrap, .goal, .studio-grid").forEach(el => { el.classList.add("reveal"); revealObserver.observe(el); });
 
 // ---------- hero: commits flow along "what happened"; some fork onto "what would have happened" ----------
 (function hero() {
@@ -359,7 +359,7 @@ function renderChart(r) {
   if (B) {
     const area = path(A) + B.map((v, i) => `L${x(B.length - 1 - i).toFixed(1)},${y(B[B.length - 1 - i]).toFixed(1)}`).join("") + "Z";
     const up = B[B.length - 1] >= A[A.length - 1];
-    el.append(svg("path", { d: area, class: "gap-area", fill: up ? "#3ddc97" : "#ff5d6c" }));
+    el.append(svg("path", { d: area, class: "gap-area", fill: up ? "#6cc6a6" : "#f0616d" }));
     if (state.from > 0) {
       const day = Math.round((Date.UTC(2026, state.from, 1) - Date.UTC(2026, 0, 1)) / 864e5);
       el.append(svg("line", { x1: x(day), x2: x(day), y1: 0, y2: H, class: "from-line" }));
@@ -393,8 +393,8 @@ function renderChart(r) {
     tip.style.left = px + 18 + "px";
     tip.style.top = (y(A[i]) / H) * rect.height + 40 + "px";
     tip.replaceChildren(h("b", {}, fmtDate(date, { day: "numeric", month: "long" })), h("br"),
-      h("span", { style: "color:var(--violet-2)" }, "actual  " + money(A[i])),
-      ...(B ? [h("br"), h("span", { style: "color:var(--amber)" }, "replay  " + money(B[i])), h("br"), h("span", {}, "diff    " + money(B[i] - A[i], { sign: true }))] : []));
+      h("span", { style: "color:var(--past)" }, "actual  " + money(A[i])),
+      ...(B ? [h("br"), h("span", { style: "color:var(--alt)" }, "replay  " + money(B[i])), h("br"), h("span", {}, "diff    " + money(B[i] - A[i], { sign: true }))] : []));
   };
   el.onmouseleave = () => { tip.hidden = true; cursor.setAttribute("visibility", "hidden"); };
 }
@@ -409,11 +409,11 @@ function renderDiff(A, B, x) {
   const y = v => mid - (v / m) * (mid - 4);
   const pts = D.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`);
   const end = D[D.length - 1];
-  el.append(svg("path", { d: `M0,${mid} L${pts.join(" L")} L${W},${mid} Z`, fill: end >= 0 ? "#3ddc97" : "#ff5d6c", opacity: ".22" }));
+  el.append(svg("path", { d: `M0,${mid} L${pts.join(" L")} L${W},${mid} Z`, fill: end >= 0 ? "#6cc6a6" : "#f0616d", opacity: ".22" }));
   el.append(svg("path", { d: "M" + pts.join(" L"), class: "line-b" }));
   const now = $("#diffNow");
   now.textContent = money(end, { sign: true });
-  now.style.color = end > 0 ? "var(--green)" : end < 0 ? "var(--red)" : "var(--muted)";
+  now.style.color = end > 0 ? "var(--good)" : end < 0 ? "var(--bad)" : "var(--muted)";
 }
 
 const KIND = {
@@ -641,4 +641,80 @@ const KINDS = ["Go library, on your storage", "Built into SQL Server, MariaDB, D
   t.append(h("tbody", {},
     ...ROWS.map(([title, sub, vals]) => h("tr", {}, h("td", {}, title, h("small", {}, sub)), ...vals.map((v, i) => h("td", { class: i === 0 ? "epoch" : "" }, mark(v))))),
     h("tr", { class: "kind" }, h("td", {}, "What it is"), ...KINDS.map((k, i) => h("td", { class: i === 0 ? "epoch" : "" }, k)))));
+})();
+
+
+// ---------- hero terminal: types the real tour output ----------
+(function terminal() {
+  const el = $("#term");
+  if (!el) return;
+  // Trimmed from `go run ./examples/shop` to fit; numbers are as printed.
+  const OUT = [
+    ["q", "Epoch tour: an online shop, 1 Jan to 30 Jun 2026"],
+    ["", "Recorded 2,280 commands: 2,068 orders placed, 48 turned away."],
+    ["", ""],
+    ["q", "3. What if customers of 12+ months had had 15% off all year?"],
+    ["", "   Replayed 2,280 commands on branch \"loyalty\" in 13ms."],
+    ["", "   1,477 orders turned out differently: 1,477 re-priced."],
+    ["", ""],
+    ["d", "                           actual       loyalty    difference"],
+    ["", "   orders                   2,068         2,068             ·"],
+    ["", "   turned away                 48            48             ·"],
+    ["pos", "   discounts given     $24,617.30    $68,033.70   +$43,416.40"],
+    ["neg", "   revenue            $544,745.70   $501,329.30   -$43,416.40"],
+    ["", ""],
+    ["", "   First change: kb-01 on 1 Jan 09:33"],
+    ["d", "     was: order of 2 at $129.00, $0.00 off, total $258.00"],
+    ["", "     now: order of 2 at $129.00, $38.70 off, total $219.30"],
+  ];
+  const CMD = "go run ./examples/shop";
+  const prompt = () => h("span", { class: "p" }, "$ ");
+  const cursor = h("span", { class: "cur" });
+  function finalFrame() {
+    el.replaceChildren(prompt(), CMD + "\n", ...OUT.map(([c, t]) => h("span", { class: c }, t + "\n")), prompt(), cursor);
+  }
+  if (reducedMotion) { finalFrame(); return; }
+  let started = false;
+  async function play() {
+    if (started) return;
+    started = true;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    el.replaceChildren(prompt(), cursor);
+    await wait(600);
+    for (const ch of CMD) { cursor.before(ch); await wait(38 + Math.random() * 40); }
+    cursor.before("\n");
+    await wait(450);
+    for (const [c, t] of OUT) {
+      cursor.before(h("span", { class: c }, t + "\n"));
+      await wait(t ? 90 : 160);
+    }
+    cursor.before(prompt());
+  }
+  new IntersectionObserver(([e], io) => { if (e.isIntersecting) { play(); io.disconnect(); } }).observe(el);
+})();
+
+// ---------- studio showcase ----------
+(function studio() {
+  const SHOTS = {
+    overview: ["img/studio-overview.png", "branch=main&tab=views", "Epoch Studio showing the sales read model with an activity chart and branch list"],
+    replay: ["img/studio-replay.png", "branch=backorders&tab=report", "Epoch Studio replay report listing orders whose outcome changed"],
+    compare: ["img/studio-compare.png", "branch=loyalty&tab=compare", "Epoch Studio comparing revenue between the main and loyalty branches"],
+    entity: ["img/studio-entity.png", "branch=backorders&tab=entity", "Epoch Studio showing the ergonomic chair's history on the backorders branch"],
+  };
+  const img = $("#studioShot"), url = $("#studioUrl");
+  // Warm the cache so switching tabs is instant.
+  const prefetch = new IntersectionObserver(([e], io) => {
+    if (!e.isIntersecting) return;
+    Object.values(SHOTS).forEach(([src]) => { const i = new Image(); i.src = src; });
+    io.disconnect();
+  }, { rootMargin: "600px 0px" });
+  prefetch.observe(img);
+  $$("#studioTabs button").forEach(b => b.addEventListener("click", () => {
+    const [src, hash, alt] = SHOTS[b.dataset.shot];
+    $$("#studioTabs button").forEach(x => x.setAttribute("aria-selected", String(x === b)));
+    url.textContent = "localhost:8080/epoch/#" + hash;
+    img.classList.add("swap");
+    $("#studioLink").href = src;
+    setTimeout(() => { img.src = src; img.alt = alt; img.onload = () => img.classList.remove("swap"); }, 150);
+  }));
 })();
