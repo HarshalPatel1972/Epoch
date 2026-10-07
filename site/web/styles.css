@@ -2,15 +2,16 @@
    what would have happened, green accepted, red refused. */
 
 :root {
-  --bg: #07070c;
-  --bg-1: #0d0d16;
-  --bg-2: #13131f;
-  --bg-3: #1b1b2b;
-  --line: #24243a;
-  --line-2: #33334d;
+  /* Lifted from near-black so glossy screens don't mirror the room. */
+  --bg: #1a1b29;
+  --bg-1: #212234;
+  --bg-2: #282a3f;
+  --bg-3: #31334b;
+  --line: #383a55;
+  --line-2: #4a4d6e;
   --text: #ecebf5;
-  --muted: #9a9ab3;
-  --dim: #6c6c86;
+  --muted: #a8a8c0;
+  --dim: #8c8eac;
   --violet: #8b7fff;
   --violet-2: #b3abff;
   --amber: #ffb547;
@@ -40,7 +41,7 @@ body::before { /* faint grid, like graph paper for time */
   background-image: linear-gradient(var(--bg-2) 1px, transparent 1px), linear-gradient(90deg, var(--bg-2) 1px, transparent 1px);
   background-size: 64px 64px;
   mask-image: radial-gradient(ellipse at 50% 0%, black 10%, transparent 70%);
-  opacity: .55;
+  opacity: .35;
 }
 a { color: var(--violet-2); text-decoration: none; }
 a:hover { color: var(--text); }
@@ -86,7 +87,7 @@ section { padding: 120px 24px; max-width: var(--max); margin: 0 auto; position: 
 .copy-label { font: 600 11px var(--sans); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); border-left: 1px solid var(--line); padding-left: 12px; }
 
 /* ---------- nav ---------- */
-.nav { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 28px; padding: 14px 24px; backdrop-filter: blur(14px) saturate(140%); background: rgba(7,7,12,.6); border-bottom: 1px solid transparent; transition: border-color .3s; }
+.nav { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 28px; padding: 14px 24px; backdrop-filter: blur(14px) saturate(140%); background: rgba(26,27,41,.78); border-bottom: 1px solid transparent; transition: border-color .3s; }
 .nav.scrolled { border-bottom-color: var(--line); }
 .nav nav { display: flex; gap: 22px; margin-left: auto; }
 .nav nav a { color: var(--muted); font-size: 14px; font-weight: 500; }
@@ -120,7 +121,7 @@ section { padding: 120px 24px; max-width: var(--max); margin: 0 auto; position: 
 /* ---------- story ---------- */
 .story { display: grid; grid-template-columns: 1.1fr .9fr; gap: 60px; max-width: 1280px; }
 .stage-wrap { position: relative; }
-.stage { position: sticky; top: 90px; height: min(560px, calc(100vh - 120px)); border: 1px solid var(--line); border-radius: 24px; background: radial-gradient(ellipse at 30% 20%, #15152a, var(--bg-1) 70%); overflow: hidden; }
+.stage { position: sticky; top: 90px; height: min(560px, calc(100vh - 120px)); border: 1px solid var(--line); border-radius: 24px; background: radial-gradient(ellipse at 30% 20%, #2a2b48, var(--bg-1) 70%); overflow: hidden; }
 .scene { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; transform: scale(.98); transition: opacity .6s, transform .6s; pointer-events: none; padding: 28px; }
 .scene.on { opacity: 1; transform: none; }
 .scene svg { width: 100%; height: 100%; overflow: visible; }
